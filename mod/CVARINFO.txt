@@ -1,0 +1,24 @@
+// Doomscent settings (see the "Doomscent Options" menu)
+
+// Bank the view into turns, like Descent's PF_TURNROLL.
+user bool dd_bankturns = false;
+
+// Near level flight, turn about the world's vertical axis (Doom-style) so
+// the horizon stays straight.  Off: always turn about the ship's own axes,
+// as in Descent.
+user bool dd_levelturn = true;
+
+// Slowly roll the ship back level when not banking.
+user bool dd_autolevel = false;
+
+// Draw the Descent cockpit (off = full-screen HUD with reticle only).
+user bool dd_cockpit = true;
+
+// Thrust multiplier.  1.0 is Descent's Pyro-GX.
+server float dd_thrust = 1.0;
+
+// Damage multiplier for Descent weapons against Doom monsters.
+server float dd_damage = 1.0;
+
+// Open doors and press switches by flying into them.
+server bool dd_bumpuse = true;

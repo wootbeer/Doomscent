@@ -1,0 +1,6 @@
+GameInfo
+{
+	PlayerClasses = "DDShip"
+	StatusBarClass = "DDStatusBar"
+	AddEventHandlers = "DDEventHandler"
+}

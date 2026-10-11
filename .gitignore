@@ -1,0 +1,28 @@
+# Game data is never committed: players supply their own.
+*.wad
+*.WAD
+*.hog
+*.HOG
+*.pig
+*.PIG
+*.ham
+*.HAM
+
+# Built / generated archives (the asset pack contains Descent data).
+*.pk3
+*.pk7
+*.ipk3
+dist/
+dd_descent_assets/
+
+# GZDoom installs, configs and saves if someone unpacks them here.
+gzdoom/
+gzdoom*.exe
+*.ini
+*.zds
+screenshots/
+
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db

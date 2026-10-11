@@ -1,0 +1,46 @@
+name: Release
+
+# Push a tag like v0.1.0 to build and publish a release.  It can also be
+# run by hand from the Actions tab to just build the zip as an artifact.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check the tag matches VERSION
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: test "v$(cat VERSION)" = "${GITHUB_REF_NAME}"
+
+      - name: Build ddconvert.exe
+        run: |
+          python -m pip install pyinstaller==6.11.1
+          pyinstaller --onefile --name ddconvert --distpath build/exe tools/ddconvert.py
+
+      - name: Assemble the release zip
+        run: python tools/make_release.py --exe build/exe/ddconvert.exe -o dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: doomscent
+          path: dist/Doomscent-*.zip
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/Doomscent-*.zip
+          body_path: CHANGELOG.md
