@@ -1,3 +1,9 @@
+# Unreleased
+
+- Heretic's wind and water currents (and Boom wind/current pushers) only
+  move the ship when it is down on the floor or water, not while flying
+  above them
+
 # Doomscent 0.2.0
 
 Chexscent, Herescent and Hexscent: the Pyro-GX now flies through Chex Quest,
