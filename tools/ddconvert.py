@@ -431,7 +431,73 @@ class Converter:
             for num, idx in enumerate(self.gd.sound_map):
                 if idx != 255 and idx < len(self.pig.sounds):
                     self.sndinfo.append('$alias ddsnd/%d dd/%s' % (num, self.pig.sounds[idx].name))
+        # The ship's "player sounds": no Doomguy grunts.  Death is an
+        # explosion, everything else is silent (the mod plays Descent's
+        # hit sound itself).
+        self.zip.writestr('sounds/dd/silence.wav', wav(b'\x80' * 32))
+        death = None
+        if self.gd and self.gd.sound_map[41] != 255:
+            death = self.pig.sounds[self.gd.sound_map[41]].name
+        for snd in ('*pain100', '*pain75', '*pain50', '*pain25', '*grunt', '*land',
+                    '*usefail', '*jump', '*fist', '*poison', '*taunt', '*splash', '*puzzfail'):
+            self.sndinfo.append('$playersound ddship male %s "sounds/dd/silence.wav"' % snd)
+        for snd in ('*death', '*xdeath', '*gibbed', '*wimpydeath', '*crazydeath'):
+            lump = 'sounds/dd/%s.wav' % death if death else 'sounds/dd/silence.wav'
+            self.sndinfo.append('$playersound ddship male %s "%s"' % (snd, lump))
         self.report.append('%d sounds' % len(self.pig.sounds))
+
+    # -- fonts ---------------------------------------------------------------
+
+    def convert_font(self, hogname, fontname):
+        """Descent .fnt (gr_init_font) -> a GZDoom font folder, one PNG per
+        character named by its code point."""
+        d = self.hog.get(hogname)
+        if d is None or d[:4] != b'PSFN':
+            return False
+        datasize = struct.unpack_from('<i', d, 4)[0]
+        f = 8
+        w, h, flags, baseline, minc, maxc, bytewidth, data_ofs, _, widths_ofs, kern_ofs = \
+            struct.unpack_from('<hhhhBBhIIII', d, f)
+        nchars = maxc - minc + 1
+        color = flags & 1
+        prop = flags & 2
+        if color:
+            pal = d[8 + datasize:8 + datasize + 768]
+            palette = [(pal[i * 3] * 255 // 63, pal[i * 3 + 1] * 255 // 63, pal[i * 3 + 2] * 255 // 63)
+                       for i in range(256)]
+        widths = (struct.unpack_from('<%dh' % nchars, d, f + widths_ofs) if prop else [w] * nchars)
+        ptr = f + (data_ofs if prop else 28)
+        for i in range(nchars):
+            cw = widths[i]
+            rgba = bytearray(cw * h * 4)
+            if color:
+                for y in range(h):
+                    for x in range(cw):
+                        c = d[ptr + y * cw + x]
+                        if c != 255:
+                            rgba[(y * cw + x) * 4:(y * cw + x) * 4 + 4] = bytes(palette[c] + (255,))
+                ptr += cw * h
+            else:
+                bw = (cw + 7) // 8 if prop else bytewidth
+                for y in range(h):
+                    for x in range(cw):
+                        if d[ptr + y * bw + x // 8] & (0x80 >> (x % 8)):
+                            rgba[(y * cw + x) * 4:(y * cw + x) * 4 + 4] = b'\xff\xff\xff\xff'
+                ptr += bw * h
+            code = minc + i
+            if code > 126 or cw <= 0:
+                continue          # Descent puts its own symbols above 126
+            self.zip.writestr('fonts/%s/%04X.png' % (fontname, code), png(cw, h, rgba))
+        # Lower-case letters fall back to upper case if missing, so leave
+        # them; spacing comes from the glyph widths.
+        self.zip.writestr('fonts/%s/font.inf' % fontname,
+                          'Kerning 0\nSpaceWidth %d\nFontHeight %d\n' % (widths[0] if nchars else w, h + 1))
+        return True
+
+    def convert_fonts(self):
+        done = [n for hogname, n in (('font3-1.fnt', 'ddsmall'), ('font2-1.fnt', 'ddmedium'))
+                if self.convert_font(hogname, n)]
+        self.report.append('fonts: ' + ', '.join(done))
 
     # -- polygon models ----------------------------------------------------
 
@@ -630,6 +696,7 @@ def main(argv=None):
         c.convert_hud()
         c.convert_sprites()
         c.convert_sounds()
+        c.convert_fonts()
         c.convert_models()
         c.write_modeldef()
         c.finish()

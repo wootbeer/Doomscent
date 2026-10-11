@@ -199,6 +199,24 @@ class DDPowerup : CustomInventory
 		return DDShip(toucher);
 	}
 
+	// Descent prints pickups on its HUD message line, not in the corner.
+	override String PickupMessage()
+	{
+		return "";
+	}
+
+	override void PlayPickupSound(Actor toucher)
+	{
+		Super.PlayPickupSound(toucher);
+		let ship = DDShip(toucher);
+		if (ship) ship.ShowMessage(DescentMessage(toucher));
+	}
+
+	virtual String DescentMessage(Actor toucher)
+	{
+		return StringTable.Localize(Super.PickupMessage());
+	}
+
 	// Descent's 3 + 3 * (NDL - Difficulty_level) boost.
 	static int BoostAmount()
 	{
@@ -227,6 +245,11 @@ class DDEnergyBoost : DDPowerup
 	Pickup:
 		TNT1 A 0 { return invoker.GiveEnergy(self); }
 		Stop;
+	}
+
+	override String DescentMessage(Actor toucher)
+	{
+		return String.Format(StringTable.Localize("$DD_ENERGYTO"), toucher.CountInv('DDEnergy'));
 	}
 
 	bool GiveEnergy(Actor toucher)
@@ -290,6 +313,11 @@ class DDShieldBoost : DDPowerup
 	Pickup:
 		TNT1 A 0 { return invoker.GiveShields(self); }
 		Stop;
+	}
+
+	override String DescentMessage(Actor toucher)
+	{
+		return String.Format(StringTable.Localize("$DD_SHIELDTO"), toucher.health);
 	}
 
 	bool GiveShields(Actor toucher)

@@ -14,8 +14,17 @@ class DDStatusBar : BaseStatusBar
 		// Height 0: never shrink the 3D view for a status bar.
 		SetSize(0, 320, 200);
 		texCockpit = TexMan.CheckForTexture("DDCOCKPT", TexMan.Type_Any);
-		hudFont = SmallFont;
+		// Descent's own gauge font if the asset pack has it.
+		hudFont = Font.GetFont('ddsmall');
+		fontScale = 1.0;
+		if (hudFont == null)
+		{
+			hudFont = SmallFont;
+			fontScale = 0.55;
+		}
 	}
+
+	double fontScale;
 
 	override void Draw(int state, double ticFrac)
 	{
@@ -33,13 +42,14 @@ class DDStatusBar : BaseStatusBar
 		else
 			DrawMinimal(ship, state != HUD_None);
 		DrawReticle(ship);
+		DrawHudMessage(ship);
 
 		// Without mouselook the mouse moves the ship instead of aiming it.
 		if (!CVar.GetCVar('freelook', CPlayer).GetBool())
 		{
 			SetupScale();
 			String msg = StringTable.Localize("$DD_FREELOOK");
-			Txt(msg, 160 - hudFont.StringWidth(msg) * 0.35, 20, Font.CR_YELLOW, 0.7);
+			Txt(msg, 160 - hudFont.StringWidth(msg) * fontScale * 0.65, 20, COL_ENERGY, 1.3);
 		}
 	}
 
@@ -68,15 +78,24 @@ class DDStatusBar : BaseStatusBar
 			DTA_ClipLeft, int(cl * sx), DTA_ClipRight, int(cr * sx));
 	}
 
-	void Txt(String s, double x, double y, int color, double scale = 0.55)
+	// Descent's gauge colours (gr_getcolor values from GAUGES.C, brightened
+	// a little for modern displays).
+	const COL_ENERGY = 0xFFE0A030;
+	const COL_SHIELD = 0xFF9090FF;
+	const COL_WEAPON = 0xFF20C020;
+	const COL_AMMO = 0xFFD02020;
+	const COL_MESSAGE = 0xFF20E020;
+
+	void Txt(String s, double x, double y, Color col, double scale = 1.0)
 	{
-		Screen.DrawText(hudFont, color, x * sx, y * sy, s,
-			DTA_ScaleX, sx * scale, DTA_ScaleY, sy * scale);
+		scale *= fontScale;
+		Screen.DrawText(hudFont, Font.CR_UNTRANSLATED, x * sx, y * sy, s,
+			DTA_ScaleX, sx * scale, DTA_ScaleY, sy * scale, DTA_Color, col);
 	}
 
-	void TxtRight(String s, double right, double y, int color, double scale = 0.55)
+	void TxtRight(String s, double right, double y, Color color, double scale = 1.0)
 	{
-		double w = hudFont.StringWidth(s) * scale;
+		double w = hudFont.StringWidth(s) * scale * fontScale;
 		Txt(s, right - w, y, color, scale);
 	}
 
@@ -100,8 +119,8 @@ class DDStatusBar : BaseStatusBar
 
 		// Numerical readout (draw_numerical_display).
 		Pic("DDNUMER", 154, 130);
-		TxtRight(String.Format("%d", energy), 154 + 16, 131.5, Font.CR_ORANGE);
-		TxtRight(String.Format("%d", shields), 154 + 16, 144.5, Font.CR_LIGHTBLUE);
+		TxtRight(String.Format("%d", energy), 154 + 16, 131.5, COL_ENERGY);
+		TxtRight(String.Format("%d", shields), 154 + 16, 144.5, COL_SHIELD);
 
 		// Shield ring and ship (draw_shield_bar / draw_player_ship).
 		bool invul = CPlayer.mo.FindInventory('PowerInvulnerable') != null;
@@ -138,7 +157,7 @@ class DDStatusBar : BaseStatusBar
 		int primary = ship.CurrentPrimary();
 		static const String ppics[] = { "DDWLASR", "DDWVULC", "DDWSPRD", "DDWPLAS", "DDWFUSN" };
 		static const String pnames[] = { "$DD_LASER", "$DD_VULCAN", "$DD_SPREADFIRE", "$DD_PLASMA", "$DD_FUSION" };
-		int green = Font.CR_GREEN;
+		Color green = COL_WEAPON;
 
 		// Primary box (draw_weapon_info_sub).
 		Pic(ppics[primary], 64, 154);
@@ -151,7 +170,7 @@ class DDStatusBar : BaseStatusBar
 		else if (primary == DD.PW_VULCAN)
 		{
 			int rounds = int(ship.CountInv('DDVulcanAmmo') * DD.VULCAN_AMMO_SCALE);
-			Txt(String.Format("%05d", rounds), 93, 171, Font.CR_RED);
+			Txt(String.Format("%05d", rounds), 93, 171, COL_AMMO);
 		}
 
 		// Secondary box.
@@ -159,7 +178,7 @@ class DDStatusBar : BaseStatusBar
 		Pic(DD.SecondaryPicture(sec), 234, 154);
 		String nm = DD.SecondaryName(sec);
 		Txt(nm, 207, 157, green);
-		Txt(String.Format("%03d", ship.CountInv(DD.SecondaryAmmo(sec))), 213, 171, Font.CR_RED);
+		Txt(String.Format("%03d", ship.CountInv(DD.SecondaryAmmo(sec))), 213, 171, COL_AMMO);
 	}
 
 	// Without the cockpit: Descent's full-screen HUD readouts.
@@ -172,8 +191,8 @@ class DDStatusBar : BaseStatusBar
 		int primary = ship.CurrentPrimary();
 		static const String pnames[] = { "$DD_LASER", "$DD_VULCAN", "$DD_SPREADFIRE", "$DD_PLASMA", "$DD_FUSION" };
 
-		Txt(String.Format("%s: %d", StringTable.Localize("$DD_ENERGY"), energy), 4, 186, Font.CR_ORANGE, 0.7);
-		Txt(String.Format("%s: %d", StringTable.Localize("$DD_SHIELD"), shields), 4, 178, Font.CR_LIGHTBLUE, 0.7);
+		Txt(String.Format("%s: %d", StringTable.Localize("$DD_ENERGY"), energy), 4, 186, COL_ENERGY, 1.3);
+		Txt(String.Format("%s: %d", StringTable.Localize("$DD_SHIELD"), shields), 4, 178, COL_SHIELD, 1.3);
 
 		String p = StringTable.Localize(pnames[primary]);
 		if (primary == DD.PW_LASER)
@@ -181,9 +200,9 @@ class DDStatusBar : BaseStatusBar
 				ship.quadLasers ? " " .. StringTable.Localize("$DD_QUAD") : "");
 		else if (primary == DD.PW_VULCAN)
 			p = String.Format("%s: %d", p, int(ship.CountInv('DDVulcanAmmo') * DD.VULCAN_AMMO_SCALE));
-		TxtRight(p, 316, 178, Font.CR_GREEN, 0.7);
+		TxtRight(p, 316, 178, COL_WEAPON, 1.3);
 		TxtRight(String.Format("%s: %d", DD.SecondaryName(ship.secondary), ship.CountInv(DD.SecondaryAmmo(ship.secondary))),
-			316, 186, Font.CR_GREEN, 0.7);
+			316, 186, COL_WEAPON, 1.3);
 
 		int kx = 4;
 		static const Name cards[] = { 'BlueCard', 'YellowCard', 'RedCard' };
@@ -197,6 +216,15 @@ class DDStatusBar : BaseStatusBar
 				kx += 10;
 			}
 		}
+	}
+
+	// Descent's HUD message line, centred at the top of the screen.
+	void DrawHudMessage(DDShip ship)
+	{
+		if (ship.msgText.Length() == 0 || Level.maptime - ship.msgTime > 70) return;
+		SetupScale();
+		double w = hudFont.StringWidth(ship.msgText) * fontScale;
+		Txt(ship.msgText, 160 - w / 2, 4, COL_MESSAGE);
 	}
 
 	// show_reticle(): the cross plus primary/secondary readiness markers.

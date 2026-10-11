@@ -37,10 +37,19 @@ class DDShip : PlayerPawn
 
 	int homingWarning;           // tics left on the homing warning light
 
+	String msgText;
+	int msgTime;
+
+	void ShowMessage(String msg)
+	{
+		msgText = msg;
+		msgTime = Level.maptime;
+	}
+
 	Default
 	{
 		Player.DisplayName "Pyro-GX";
-		Player.SoundClass "player";
+		Player.SoundClass "ddship";
 		Player.ViewHeight 16;
 		Player.AttackZOffset 0;
 		Player.MaxHealth 200;
@@ -85,6 +94,7 @@ class DDShip : PlayerPawn
 		Goto Spawn;
 	Death:
 	XDeath:
+		TNT1 A 0 A_PlayerScream;
 		TNT1 A 0 A_DDShipDeath;
 		TNT1 A -1;
 		Stop;
@@ -97,6 +107,10 @@ class DDShip : PlayerPawn
 	{
 		Super.PostBeginPlay();
 		ResetOrientation();
+		// Hover off the floor so damaging floors (nukage) only hurt when
+		// the ship actually scrapes them.
+		if (pos.z <= floorz && ceilingz - floorz > Height + 8)
+			SetZ(floorz + 8);
 	}
 
 	void ResetOrientation()
@@ -757,10 +771,10 @@ class DDShip : PlayerPawn
 		if (which < 0 || which >= DD.NUM_SECONDARIES) return;
 		if (CountInv(DD.SecondaryAmmo(which)) <= 0)
 		{
-			if (!quiet && player == players[consoleplayer])
+			if (!quiet)
 			{
 				A_StartSound("ddsnd/156", CHAN_ITEM, CHANF_UI | CHANF_LOCAL);
-				A_Print(String.Format(StringTable.Localize("$DD_NOSECONDARY"), DD.SecondaryName(which)));
+				ShowMessage(String.Format(StringTable.Localize("$DD_NOSECONDARY"), DD.SecondaryName(which)));
 			}
 			return;
 		}
@@ -773,8 +787,7 @@ class DDShip : PlayerPawn
 		if (!quiet)
 		{
 			A_StartSound("ddsnd/154", CHAN_ITEM, CHANF_UI | CHANF_LOCAL);
-			if (player == players[consoleplayer])
-				A_Print(String.Format(StringTable.Localize("$DD_SELECTED"), DD.SecondaryName(which)));
+			ShowMessage(String.Format(StringTable.Localize("$DD_SELECTED"), DD.SecondaryName(which)));
 		}
 	}
 
@@ -828,7 +841,6 @@ class DDShip : PlayerPawn
 
 	void A_DDShipDeath()
 	{
-		A_StartSound("ddsnd/41", CHAN_VOICE);
 		let fx = DDEffect(Spawn('DDEffect', pos + (0, 0, Height / 2), ALLOW_REPLACE));
 		if (fx) fx.Setup(0, 40);
 		bNoGravity = false;
