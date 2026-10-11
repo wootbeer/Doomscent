@@ -468,6 +468,12 @@ class DDShip : PlayerPawn
 		int buttons = player.cmd.buttons;
 		double now = GameTime();
 
+		// No weapon waits more than a few seconds; anything further ahead is
+		// a stale timer (e.g. from a save made by an older version).
+		if (nextPrimaryTime > now + 5) nextPrimaryTime = primaryReadyTime = now;
+		if (nextSecondaryTime > now + 5) nextSecondaryTime = secondaryReadyTime = now;
+		if (nextFlareTime > now + 5) nextFlareTime = now;
+
 		// The Doom weapon only exists for selection; we fire it ourselves.
 		if (player.ReadyWeapon == null || player.PendingWeapon != WP_NOCHANGE)
 		{
