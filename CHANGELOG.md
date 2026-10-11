@@ -1,4 +1,4 @@
-# Unreleased
+# Doomscent 0.2.1
 
 - Heretic's wind and water currents (and Boom wind/current pushers) only
   move the ship when it is down on the floor or water, not while flying
