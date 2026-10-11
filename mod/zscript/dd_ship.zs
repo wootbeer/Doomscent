@@ -357,16 +357,34 @@ class DDShip : PlayerPawn
 		if (homingWarning > 0) homingWarning--;
 	}
 
-	// Descent opens doors by flying into them; use any usable line we ran into.
+	// Descent opens doors by flying into them.  When the ship is pushing
+	// into a usable line (door, switch), activate it as if "use" was pressed.
 	void BumpActivate()
 	{
-		Line l = BlockingLine;
-		if (l == null || l.special == 0) return;
-		if (!(l.activation & (SPAC_Use | SPAC_UseThrough))) return;
-		if (shipVel.Length() < 10 && player.cmd.forwardmove <= 0) return;
+		if (Level.maptime & 3) return;
+		Vector3 dir = shipVel;
+		if (player.cmd.forwardmove > 0) dir += fwd * 100;
+		if (dir.Length() < 20) return;
+		dir = dir.Unit();
+
+		Line l = MovementBlockingLine;
+		if (l == null || !IsUsable(l))
+		{
+			double a, p;
+			[a, p] = DD.VectorAngles(dir);
+			FLineTraceData t;
+			if (!LineTrace(a, radius + 20, p, TRF_THRUACTORS, Height / 2, 0, 0, t)) return;
+			if (t.HitType != TRACE_HitWall || t.HitLine == null) return;
+			l = t.HitLine;
+			if (!IsUsable(l)) return;
+		}
 		int side = Level.PointOnLineSide(pos.xy, l);
 		l.Activate(self, side, SPAC_Use);
-		BlockingLine = null;
+	}
+
+	static bool IsUsable(Line l)
+	{
+		return l.special != 0 && (l.activation & (SPAC_Use | SPAC_UseThrough));
 	}
 
 	//======================================================================

@@ -13,6 +13,7 @@ addmenukey "Level ship" dd_levelship
 
 alias dd_nextsecondary "netevent dd_nextsecondary"
 alias dd_levelship "netevent dd_level"
+alias dd_info "netevent dd_info"
 
 // Bind the Descent-style layout (from the options menu).
 alias dd_bindkeys "bind w +forward; bind s +back; bind a +moveleft; bind d +moveright; bind q +user1; bind e +user2; bind space +moveup; bind c +movedown; bind lctrl +movedown; bind r +use; bind f +user3; bind b +user4; bind mouse1 +attack; bind mouse2 +altattack; bind mwheelup weapprev; bind mwheeldown weapnext; bind mouse3 dd_nextsecondary; bind z dd_levelship; bind 1 \"slot 1\"; bind 2 \"slot 2\"; bind 3 \"slot 3\"; bind 4 \"slot 4\"; bind 5 \"slot 5\"; bind 6 \"slot 6\"; bind 7 \"slot 7\"; bind 8 \"slot 8\"; bind 9 \"slot 9\"; bind 0 \"slot 0\"; freelook true; lookspring false; echo Doomscent controls bound."
