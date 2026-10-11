@@ -54,6 +54,7 @@ class DDShip : PlayerPawn
 		Player.SoundClass "ddship";
 		Player.ViewHeight 16;
 		Player.AttackZOffset 0;
+		Player.UseRange 96;
 		Player.MaxHealth 200;
 		Player.ForwardMove 0, 0;
 		Player.SideMove 0, 0;

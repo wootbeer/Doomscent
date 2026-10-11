@@ -21,8 +21,9 @@ becomes Descent's ship:
 - **Descent powerups.** Doom's pickups are replaced by Descent's spinning
   powerups: health becomes shields, armour and cells become energy, and Doom
   weapons become Descent weapons.
-- **Doors** open when you fly into them, as in Descent. Switches (including
-  level exits) need the use key, so you can't trigger them by accident.
+- **Doors** open when you fly into them, and **switches** are pressed by
+  shooting them, as in Descent. The use key works on both (and has a longer
+  reach than Doomguy's).
 
 ## What you need
 
@@ -84,7 +85,7 @@ Bind Descent-style keys** sets up the full layout:
 | Fire flare | F |
 | Drop proximity bomb | B |
 | Level the ship | Z |
-| Use (switches; doors also open on contact) | R |
+| Use (or shoot switches / fly into doors) | R |
 
 Mouselook must be on (the bind option turns it on).
 

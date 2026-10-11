@@ -171,6 +171,7 @@ class DDProjectile : Actor
 		DDEffect.Make(pos, vc, impactSize * DD.SCALE);
 		if (hitSound >= 0)
 			A_StartSound(String.Format("ddsnd/%d", hitSound), CHAN_BODY);
+		ShootSwitch();
 		if (splashRadius > 0)
 		{
 			// Descent's explode_badass_weapon: full strength at the centre,
@@ -182,6 +183,18 @@ class DDProjectile : Actor
 	}
 
 	virtual void OnImpact() {}
+
+	// In Descent you press switches by shooting them.  A player's shot that
+	// hits a usable line other than a door activates it, as the use key
+	// would (doors still open by flying into them).
+	void ShootSwitch()
+	{
+		Line l = BlockingLine;
+		if (l == null || l.special == 0 || target == null || target.player == null) return;
+		if (!(l.activation & (SPAC_Use | SPAC_UseThrough)) || DDShip.IsUsable(l)) return;
+		int side = Level.PointOnLineSide(target.pos.xy, l);
+		l.Activate(target, side, SPAC_Use);
+	}
 }
 
 //--------------------------------------------------------------------------
