@@ -43,7 +43,7 @@ class DDShip : PlayerPawn
 	void ShowMessage(String msg)
 	{
 		msgText = msg;
-		msgTime = Level.maptime;
+		msgTime = shipTics;
 	}
 
 	Default
@@ -358,6 +358,7 @@ class DDShip : PlayerPawn
 	{
 		Super.PlayerThink();
 		let player = self.player;
+		shipTics++;
 		if (player.playerstate != PST_LIVE) return;
 
 		// Keep the Doom-side "fly" state off; we do our own physics.
@@ -404,7 +405,11 @@ class DDShip : PlayerPawn
 	//======================================================================
 	// Weapons
 
-	double GameTime() { return Level.maptime * DD.TIC; }
+	// The ship's own clock.  Level.maptime restarts on every map but the
+	// ship (and its weapon timers) carries over, so firing times use this.
+	int shipTics;
+
+	clearscope double GameTime() { return shipTics * DD.TIC; }
 
 	clearscope int CurrentPrimary()
 	{

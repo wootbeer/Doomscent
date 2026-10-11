@@ -221,7 +221,7 @@ class DDStatusBar : BaseStatusBar
 	// Descent's HUD message line, centred at the top of the screen.
 	void DrawHudMessage(DDShip ship)
 	{
-		if (ship.msgText.Length() == 0 || Level.maptime - ship.msgTime > 70) return;
+		if (ship.msgText.Length() == 0 || ship.shipTics - ship.msgTime > 70) return;
 		SetupScale();
 		double w = hudFont.StringWidth(ship.msgText) * fontScale;
 		Txt(ship.msgText, 160 - w / 2, 4, COL_MESSAGE);
@@ -231,7 +231,7 @@ class DDStatusBar : BaseStatusBar
 	void DrawReticle(DDShip ship)
 	{
 		SetupScale();
-		double now = Level.maptime * DD.TIC;
+		double now = ship.GameTime();
 		int primary = ship.CurrentPrimary();
 		bool primReady = now >= ship.primaryReadyTime && ship.HasPrimaryAmmo(primary);
 		bool secReady = now >= ship.secondaryReadyTime && ship.CountInv(DD.SecondaryAmmo(ship.secondary)) > 0;
