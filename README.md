@@ -3,6 +3,8 @@
 Doom plus Descent: fly the Pyro-GX through Doom's levels with Descent's
 six-degrees-of-freedom flight, cockpit and weapons.
 
+![Flying the Pyro-GX through Doom II](docs/screenshot.png)
+
 ▶ **[Watch it in action on YouTube](https://www.youtube.com/watch?v=-WYTXA3c60Q)**
 
 Doomscent is a mod for an unmodified [GZDoom](https://zdoom.org/downloads)
