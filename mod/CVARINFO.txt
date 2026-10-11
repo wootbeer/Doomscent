@@ -8,6 +8,9 @@ user bool dd_bankturns = false;
 // as in Descent.
 user bool dd_levelturn = true;
 
+// Descent's gentle up-and-down bob of the ship.
+user bool dd_wiggle = true;
+
 // Slowly roll the ship back level when not banking.
 user bool dd_autolevel = false;
 

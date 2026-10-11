@@ -634,11 +634,13 @@ class DDBackpack : DDPowerup
 		DDPowerup.PowSize 3;
 	}
 
+	// Descent has no backpack; use its ammo pack sprite (Doom's BPAK
+	// sprite doesn't exist in Heretic, Hexen or Chex Quest).
 	States
 	{
 	Spawn:
-		BPAK A -1;
-		Stop;
+		DP46 ABCDEFGHIJKLMNO 3;
+		Loop;
 	Pickup:
 		TNT1 A 0
 		{
@@ -651,11 +653,6 @@ class DDBackpack : DDPowerup
 		Stop;
 	}
 
-	override void PostBeginPlay()
-	{
-		Super.PostBeginPlay();
-		Scale = (1, 1);
-	}
 }
 
 // Invulnerability and cloak use Doom's powers with Descent sprites.
@@ -758,5 +755,22 @@ class DDRedCard : DDKey
 class DDRedSkull : DDKey
 {
 	Default { DDKey.KeyType "RedSkull"; Inventory.PickupMessage "$GOTREDSKUL"; }
+	States { Spawn: DP26 ABCDEFGHIJKLMNO 2; Loop; }
+}
+
+// Chex Quest's keys (its locks only accept these).
+class DDChexBlueCard : DDKey
+{
+	Default { DDKey.KeyType "ChexBlueCard"; Inventory.PickupMessage "$GOTBLUECARD"; }
+	States { Spawn: DP24 ABCDEFGHIJKLMNO 2; Loop; }
+}
+class DDChexYellowCard : DDKey
+{
+	Default { DDKey.KeyType "ChexYellowCard"; Inventory.PickupMessage "$GOTYELWCARD"; }
+	States { Spawn: DP25 ABCDEFGHIJKLMNO 2; Loop; }
+}
+class DDChexRedCard : DDKey
+{
+	Default { DDKey.KeyType "ChexRedCard"; Inventory.PickupMessage "$GOTREDCARD"; }
 	States { Spawn: DP26 ABCDEFGHIJKLMNO 2; Loop; }
 }

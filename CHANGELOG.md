@@ -1,3 +1,16 @@
+# Doomscent 0.2.0
+
+Chexscent, Herescent and Hexscent: the Pyro-GX now flies through Chex Quest,
+Heretic and Hexen as well as Doom.
+
+- **Chexscent, Herescent and Hexscent**: Chex Quest, Heretic and Hexen are
+  playable, with their weapons, ammo and items replaced by Descent's
+- Inventory bar and selected-item display for Heretic/Hexen artifacts and
+  puzzle items; icons for keys Descent has no light for
+- Descent's ship bob ("wiggle"), on by default, toggle in the options
+- The supply pack (Doom's backpack) uses a Descent sprite, so it shows in
+  every game
+
 # Doomscent 0.1.0
 
 First release: fly Descent's Pyro-GX through Doom's levels.

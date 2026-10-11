@@ -36,9 +36,10 @@ becomes Descent's ship:
    [Releases](https://github.com/wootbeer/Doomscent/releases) and unzip it
    anywhere, e.g. `C:\Games\Doomscent`.
 2. Copy your game files into its `data` folder:
-   - a Doom IWAD: `DOOM.WAD`, `DOOM2.WAD`, `TNT.WAD`, `PLUTONIA.WAD`, the
-     shareware `DOOM1.WAD`, or [Freedoom](https://freedoom.github.io/)'s
-     `freedoom2.wad`;
+   - a game IWAD: Doom (`DOOM.WAD`, `DOOM2.WAD`, `TNT.WAD`, `PLUTONIA.WAD`,
+     the shareware `DOOM1.WAD`), [Freedoom](https://freedoom.github.io/)'s
+     `freedoom2.wad`, Chex Quest (`chex.wad`, `chex3.wad`), Heretic
+     (`HERETIC.WAD`) or Hexen (`HEXEN.WAD`);
    - `DESCENT.HOG` and `DESCENT.PIG` from Descent 1 (registered 1.4/1.5 is
      tested; shareware should work but is untested).
 3. Double-click `Doomscent.bat`.
@@ -116,6 +117,7 @@ The **Doomscent Options** menu also has:
 - thrust and weapon damage multipliers (mouse speed is GZDoom's own mouse
   sensitivity setting);
 - level (Doom-style) turning or Descent-style ship-axis turning;
+- the ship's gentle Descent bob (on by default);
 - banking into turns (off by default);
 - auto-levelling;
 - bump-to-open doors;
@@ -142,6 +144,34 @@ The **Doomscent Options** menu also has:
 | Invulnerability / partial invisibility | Invulnerability / cloak |
 | Backpack | Supply pack (vulcan ammo, missiles, bombs, energy) |
 | Keys | Descent keys (still open Doom's locked doors) |
+
+Custom PWADs (`-file mymap.wad`) work as long as they use the base game's
+items and monsters.
+
+## More than Doom
+
+The same Pyro-GX flies through the other games GZDoom runs:
+
+- **Chexscent** (Chex Quest 1 and 3): zorchers and Chex goodies become
+  Descent weapons and powerups the same way as Doom's; Chex Quest's keys open
+  its doors.
+- **Herescent** (Heretic): the crossbow, dragon claw, hellstaff, phoenix rod
+  and firemace become spreadfire, vulcan, plasma, smart missiles and fusion;
+  wand crystals and claw orbs are vulcan ammo, ethereal arrows concussion
+  missiles, phoenix orbs homing missiles, and runes and mace spheres energy.
+  The Tome of Power upgrades your lasers.
+- **Hexscent** (Hexen): each class's second and third weapons become
+  spreadfire and plasma, and the pieces of the fourth become the fusion
+  cannon. Blue mana is energy and green mana vulcan ammo; flechettes and
+  banishment devices supply concussion and homing missiles.
+
+In Heretic and Hexen, artifacts you carry and use (time bombs, morph ovums,
+the chaos device, Hexen's puzzle items...) work as in the original: browse
+them with `[` and `]` and use one with Enter. The selected one shows at the
+top right. Keys without a Descent key light (Heretic's green key, Hexen's
+keys) show as icons at the top left.
+
+Strife isn't supported.
 
 ## Repository layout
 

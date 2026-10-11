@@ -19,6 +19,7 @@ class DD abstract
 	const SHIP_DRAG = 0.033;
 	const SHIP_MAX_THRUST = 7.8;
 	const SHIP_MAX_ROTTHRUST = 0.14;
+	const SHIP_WIGGLE = 0.5;
 
 	// PHYSICS.C
 	const ROLL_RATE = 0.125;             // revolutions per second
