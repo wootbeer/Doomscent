@@ -125,3 +125,41 @@ class DDEffect : Actor
 		return fx;
 	}
 }
+
+// Never spawned.  GZDoom only knows sprite names that appear in some
+// actor's states, so list every vclip sprite DDEffect looks up by name.
+class DDSpriteNames : Actor abstract
+{
+	States
+	{
+	Spawn:
+		DX00 A 0;
+		DX01 A 0;
+		DX02 A 0;
+		DX03 A 0;
+		DX05 A 0;
+		DX07 A 0;
+		DX09 A 0;
+		DX11 A 0;
+		DX12 A 0;
+		DX14 A 0;
+		DX15 A 0;
+		DX21 A 0;
+		DX22 A 0;
+		DX23 A 0;
+		DX30 A 0;
+		DX31 A 0;
+		DX32 A 0;
+		DX53 A 0;
+		DX54 A 0;
+		DX55 A 0;
+		DX56 A 0;
+		DX58 A 0;
+		DX59 A 0;
+		DX60 A 0;
+		DX63 A 0;
+		DX64 A 0;
+		DX65 A 0;
+		Stop;
+	}
+}
