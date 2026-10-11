@@ -1,8 +1,5 @@
 // Doomscent settings (see the "Doomscent Options" menu)
 
-// Mouse / turn key sensitivity multiplier for the ship.
-user float dd_mousescale = 1.0;
-
 // Bank the view into turns, like Descent's PF_TURNROLL.
 user bool dd_turnroll = true;
 

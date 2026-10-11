@@ -7,7 +7,6 @@ OptionMenu "DDOptions"
 {
 	Title "Doomscent"
 	StaticText "Ship"
-	Slider "Mouse / turn sensitivity", "dd_mousescale", 0.25, 3.0, 0.05, 2
 	Option "Bank into turns", "dd_turnroll", "OnOff"
 	Option "Auto-level", "dd_autolevel", "OnOff"
 	Slider "Thrust", "dd_thrust", 0.5, 3.0, 0.1, 1

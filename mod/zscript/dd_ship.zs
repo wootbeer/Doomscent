@@ -16,7 +16,9 @@ class DDShip : PlayerPawn
 	Vector3 rotVel;
 
 	double turnRoll;         // visual bank from turning (degrees)
-	double yawRate;          // degrees per second of the last tic's turning
+	double yawRate;          // smoothed turning rate, degrees per second
+	double bankInput;        // this tic's bank keys (-1..1)
+	bool directView;         // renderer previews the mouse every frame
 	bool orientInit;
 
 	// Weapons
@@ -178,9 +180,10 @@ class DDShip : PlayerPawn
 
 		// --- Rotation ---------------------------------------------------
 		// Mouse and turn keys rotate directly (like modern Descent ports);
-		// banking uses Descent's rotational thrust and drag.
-		double sens = CVar.GetCVar('dd_mousescale', player).GetFloat();
-		double yawIn = cmd.yaw * (360. / 65536.) * sens;     // + = left
+		// banking uses Descent's rotational thrust and drag.  No extra
+		// sensitivity scale here: the renderer previews mouse movement
+		// unscaled between tics (see UpdateViewAngles).
+		double yawIn = cmd.yaw * (360. / 65536.);            // + = left
 		double pitchIn = 0;
 		if (cmd.pitch == -32768)
 		{
@@ -189,7 +192,7 @@ class DDShip : PlayerPawn
 		}
 		else
 		{
-			pitchIn = cmd.pitch * (360. / 65536.) * sens;     // + = nose up
+			pitchIn = cmd.pitch * (360. / 65536.);            // + = nose up
 		}
 
 		double bankIn = 0;
@@ -209,7 +212,11 @@ class DDShip : PlayerPawn
 		if (bankIn == 0 && CVar.GetCVar('dd_autolevel', player).GetBool())
 			LevelShip(DD.ROLL_RATE * 360 * dt);
 
-		yawRate = -yawIn / dt;
+		bankInput = bankIn;
+
+		// Mouse input arrives unevenly per tic, so smooth the turn rate
+		// that drives the bank-into-turns effect (~0.12s time constant).
+		yawRate += (-yawIn / dt - yawRate) * 0.21;
 
 		// --- Translation ------------------------------------------------
 		// Read back what the engine did to us last tic (wall slides etc).
@@ -326,10 +333,13 @@ class DDShip : PlayerPawn
 		Vector3 u0 = r0 cross fwd;
 		newRoll = atan2(up dot r0, up dot u0);
 
-		// Visual bank into turns (PF_TURNROLL).
+		// Visual bank into turns (PF_TURNROLL).  It goes in the view-roll
+		// offset, which the renderer interpolates on its own.
 		if (CVar.GetCVar('dd_turnroll', player).GetBool())
 		{
-			double desired = -yawRate / 360. * DD.TURNROLL_SCALE * 360.;
+			// Descent's formula, capped: mouse turns can be much faster
+			// than Descent's keyboard turning.
+			double desired = clamp(-yawRate * DD.TURNROLL_SCALE, -25, 25);
 			double maxStep = DD.ROLL_RATE * 360. * DD.TIC;
 			turnRoll += clamp(desired - turnRoll, -maxStep, maxStep);
 		}
@@ -337,18 +347,30 @@ class DDShip : PlayerPawn
 		{
 			turnRoll = 0;
 		}
-		newRoll += turnRoll;
+		ViewRoll = turnRoll;
+		player.cheats |= CF_INTERPVIEWANGLES;
 
-		// Interpolate between tics unless the Euler angles flipped (passing
-		// straight up or down), which would make the frame in between spin.
+		// The Euler angles flip when passing straight up or down; don't
+		// interpolate across that or the frame in between spins.
 		bool flipped = abs(deltaangle(Angle, newAngle)) > 90 || abs(deltaangle(Roll, newRoll)) > 90;
+
+		// How the renderer turns the view between tics:
+		//  - direct: GZDoom's own path, which adds not-yet-processed mouse
+		//    movement every frame.  Smooth and immediate, but it turns about
+		//    the world's vertical axis, so it is only right when the ship is
+		//    close to level and not banking.
+		//  - interpolated: blend the last two tics.  Correct in any
+		//    orientation, one tic behind the mouse.
+		double rollLimit = directView ? 20 : 10;
+		directView = abs(newRoll) < rollLimit && abs(newPitch) < 80 && bankInput == 0
+			&& abs(rotVel.x) < 0.02 && abs(rotVel.y) < 0.02 && abs(rotVel.z) < 0.02;
 
 		player.MinPitch = -90;
 		player.MaxPitch = 90;
 		Angle = newAngle;
 		Pitch = newPitch;
 		Roll = newRoll;
-		if (!flipped) player.cheats |= CF_INTERPVIEW;
+		if (!directView && !flipped) player.cheats |= CF_INTERPVIEW;
 	}
 
 	//======================================================================
@@ -373,33 +395,70 @@ class DDShip : PlayerPawn
 	}
 
 	// Descent opens doors by flying into them.  When the ship is pushing
-	// into a usable line (door, switch), activate it as if "use" was pressed.
+	// into a door that is actually in its way, open it as if "use" was
+	// pressed.
+	int lastBumpTics;
+
 	void BumpActivate()
 	{
 		if (Level.maptime & 3) return;
+		// Re-using a Doom door while it is open closes it again, so leave
+		// time between activations.
+		if (shipTics - lastBumpTics < 35) return;
+
 		Vector3 dir = shipVel;
 		if (player.cmd.forwardmove > 0) dir += fwd * 100;
 		if (dir.Length() < 20) return;
 		dir = dir.Unit();
 
 		Line l = MovementBlockingLine;
+		Vector2 at = pos.xy;
 		if (l == null || !IsUsable(l))
 		{
 			double a, p;
 			[a, p] = DD.VectorAngles(dir);
 			FLineTraceData t;
-			if (!LineTrace(a, radius + 20, p, TRF_THRUACTORS, Height / 2, 0, 0, t)) return;
+			bool hit = LineTrace(a, radius + 20, p, TRF_THRUACTORS, Height / 2, 0, 0, t);
+			if (!hit) return;
 			if (t.HitType != TRACE_HitWall || t.HitLine == null) return;
 			l = t.HitLine;
+			at = t.HitLocation.xy;
 			if (!IsUsable(l)) return;
 		}
+		if (!BlocksShip(l, at)) return;
+
 		int side = Level.PointOnLineSide(pos.xy, l);
 		l.Activate(self, side, SPAC_Use);
+		lastBumpTics = shipTics;
 	}
 
+	// True if the ship can't fly through the line at its height: a wall or
+	// switch, or a door/opening that is (still) too small.
+	bool BlocksShip(Line l, Vector2 at)
+	{
+		if (l.frontsector == null || l.backsector == null) return true;
+		double top = min(l.frontsector.ceilingplane.ZatPoint(at), l.backsector.ceilingplane.ZatPoint(at));
+		double bottom = max(l.frontsector.floorplane.ZatPoint(at), l.backsector.floorplane.ZatPoint(at));
+		return top - max(bottom, pos.z) < Height;
+	}
+
+	// Only doors open on contact.  Switches (including level exits) still
+	// need the use key, so brushing past one doesn't trigger it.
 	static bool IsUsable(Line l)
 	{
-		return l.special != 0 && (l.activation & (SPAC_Use | SPAC_UseThrough));
+		if (!(l.activation & (SPAC_Use | SPAC_UseThrough))) return false;
+		switch (l.special)
+		{
+			case 11:  // Door_Open
+			case 12:  // Door_Raise
+			case 13:  // Door_LockedRaise
+			case 14:  // Door_Animated
+			case 105: // Door_WaitRaise
+			case 202: // Generic_Door
+			case 249: // Door_CloseWaitOpen
+				return true;
+		}
+		return false;
 	}
 
 	//======================================================================
