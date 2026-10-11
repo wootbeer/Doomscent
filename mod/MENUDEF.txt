@@ -6,6 +6,8 @@ AddOptionMenu "OptionsMenu"
 OptionMenu "DDOptions"
 {
 	Title "Doomscent"
+	StaticText "$DD_VERSION"
+	StaticText ""
 	StaticText "Ship"
 	Option "Level turning (Doom-style)", "dd_levelturn", "OnOff"
 	Option "Bank into turns", "dd_bankturns", "OnOff"

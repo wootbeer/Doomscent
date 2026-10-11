@@ -1,0 +1,24 @@
+name: Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build the mod and the release zip
+        run: |
+          python -m py_compile tools/ddconvert.py tools/build_pk3.py tools/make_release.py
+          python tools/make_release.py -o dist
+      - name: No game data in the repository
+        run: |
+          if git ls-files | grep -iE '\.(wad|hog|pig|ham)$'; then
+            echo "Game data must not be committed."; exit 1
+          fi

@@ -26,46 +26,63 @@ becomes Descent's ship:
   shots from close by (about 200 units), so a stray shot can't end the level.
   The use key works too, with a longer reach than Doomguy's.
 
-## What you need
+## Install and play (Windows)
 
-| | |
-|---|---|
-| GZDoom 4.14+ | <https://zdoom.org/downloads> (OpenGL or Vulkan renderer; the software renderer cannot roll the view) |
-| Python 3 | Only for the first run, to build the mod and convert the Descent data |
-| Doom data | `DOOM.WAD`, `DOOM2.WAD`, `TNT.WAD`, `PLUTONIA.WAD`, shareware `DOOM1.WAD`, or [Freedoom](https://freedoom.github.io/) |
-| Descent data | `DESCENT.HOG` and `DESCENT.PIG` from Descent 1 (registered 1.4/1.5 is tested; shareware should work but is untested) |
-
-**No game data is included.** You need your own copies. For Descent, the
-retail game is sold on GOG and Steam, and the shareware version is widely
-available.
-
-## Setup (Windows)
-
-1. Download or clone this repository, e.g. to `C:\dev\doomscent`.
-2. Unzip GZDoom into `C:\dev\doomscent\gzdoom\` (so `gzdoom\gzdoom.exe`
-   exists), or set the `GZDOOM` environment variable to your `gzdoom.exe`.
-3. Copy your Doom WAD(s), `DESCENT.HOG` and `DESCENT.PIG` into
-   `C:\dev\doomscent\data\`.
-4. Run `Doomscent.bat`.
+1. Download the latest `Doomscent-x.y.z.zip` from
+   [Releases](https://github.com/wootbeer/Doomscent/releases) and unzip it
+   anywhere, e.g. `C:\Games\Doomscent`.
+2. Copy your game files into its `data` folder:
+   - a Doom IWAD: `DOOM.WAD`, `DOOM2.WAD`, `TNT.WAD`, `PLUTONIA.WAD`, the
+     shareware `DOOM1.WAD`, or [Freedoom](https://freedoom.github.io/)'s
+     `freedoom2.wad`;
+   - `DESCENT.HOG` and `DESCENT.PIG` from Descent 1 (registered 1.4/1.5 is
+     tested; shareware should work but is untested).
+3. Double-click `Doomscent.bat`.
 
 On the first run the launcher:
 
-- builds `doomscent.pk3` from `mod/`;
-- converts your Descent files into `dd_descent_assets.pk3` (cockpit, gauges,
-  sprites, models, sounds).
+- offers to download [GZDoom](https://zdoom.org/downloads) 4.14.2 into a
+  `gzdoom` folder (or set the `GZDOOM` environment variable to an existing
+  `gzdoom.exe`);
+- converts your Descent files into `dd_descent_assets.pk3` (cockpit,
+  gauges, sprites, models, sounds).
 
-Both files stay on your machine. The asset pack contains Descent's data and
-must not be shared.
+After that it starts straight away. If you have several IWADs, GZDoom asks
+which game to play. Extra arguments go to GZDoom, e.g.
+`Doomscent.bat -iwad DOOM2.WAD +map MAP01`.
 
-On Linux/macOS, use `./doomscent.sh` the same way, with `gzdoom` on your PATH.
+**No game data is included**, and the generated `dd_descent_assets.pk3`
+contains Descent's data, so don't share it. The retail Descent is sold on
+GOG and Steam.
 
-Manual equivalent:
+Windows SmartScreen or antivirus may be wary of `tools\ddconvert.exe`,
+since it isn't code-signed. It is built from `tools/ddconvert.py` by this
+repository's GitHub Actions; with Python 3 installed you can delete the exe
+and the launcher will run the script instead.
+
+GZDoom needs its OpenGL or Vulkan renderer (the default); the software
+renderer can't roll the view.
+
+## Linux / macOS
+
+Install GZDoom 4.14+ and Python 3, put your files in `data/` as above, and
+run `./doomscent.sh`.
+
+## Running from source
+
+Clone the repository, put your files in `data/`, and run `Doomscent.bat` (or
+`./doomscent.sh`). With Python 3 installed, the launcher rebuilds
+`doomscent.pk3` whenever something in `mod/` changes. By hand:
 
 ```
 python tools/build_pk3.py doomscent.pk3
-python tools/ddconvert.py path/to/descent -o dd_descent_assets.pk3
+python tools/ddconvert.py data -o dd_descent_assets.pk3
 gzdoom -iwad DOOM2.WAD -file dd_descent_assets.pk3 doomscent.pk3
 ```
+
+To make a release, set `VERSION`, add a `CHANGELOG.md` entry, and push a tag
+`v<VERSION>`: the Release workflow builds `ddconvert.exe` and the zip and
+publishes them.
 
 ## Controls
 
@@ -128,6 +145,8 @@ The **Doomscent Options** menu also has:
 mod/              the GZDoom mod (ZScript, menus, key setup) -> doomscent.pk3
 tools/ddconvert.py  converts DESCENT.HOG/PIG into dd_descent_assets.pk3
 tools/build_pk3.py  zips mod/ into doomscent.pk3
+tools/launcher.ps1  the Windows launcher (run by Doomscent.bat)
+tools/make_release.py  builds the release zip (used by .github/workflows)
 Doomscent.bat, doomscent.sh   launchers
 data/             where you put your WADs and Descent files (git-ignored)
 ```
