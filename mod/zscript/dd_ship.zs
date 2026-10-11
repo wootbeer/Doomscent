@@ -423,15 +423,15 @@ class DDShip : PlayerPawn
 	}
 
 	// Descent opens doors by flying into them.  When the ship is pushing
-	// into a door that is actually in its way, open it as if "use" was
-	// pressed.
+	// into a door that is actually in its way, or into a switch, use it as
+	// if "use" was pressed.
 	int lastBumpTics;
 
 	void BumpActivate()
 	{
 		if (Level.maptime & 3) return;
-		// Re-using a Doom door while it is open closes it again, so leave
-		// time between activations.
+		// Re-using a Doom door while it is open closes it again (and
+		// repeatable switches retrigger), so leave time between activations.
 		if (shipTics - lastBumpTics < 35) return;
 
 		Vector3 dir = shipVel;
@@ -441,7 +441,7 @@ class DDShip : PlayerPawn
 
 		Line l = MovementBlockingLine;
 		Vector2 at = pos.xy;
-		if (l == null || !IsUsable(l))
+		if (l == null || !(IsDoor(l) || IsSwitch(l)))
 		{
 			double a, p;
 			[a, p] = DD.VectorAngles(dir);
@@ -451,9 +451,9 @@ class DDShip : PlayerPawn
 			if (t.HitType != TRACE_HitWall || t.HitLine == null) return;
 			l = t.HitLine;
 			at = t.HitLocation.xy;
-			if (!IsUsable(l)) return;
+			if (!(IsDoor(l) || IsSwitch(l))) return;
 		}
-		if (!BlocksShip(l, at)) return;
+		if (IsDoor(l) && !BlocksShip(l, at)) return;
 
 		int side = Level.PointOnLineSide(pos.xy, l);
 		l.Activate(self, side, SPAC_Use);
@@ -470,9 +470,7 @@ class DDShip : PlayerPawn
 		return top - max(bottom, pos.z) < Height;
 	}
 
-	// Only doors open on contact.  Switches (including level exits) still
-	// need the use key, so brushing past one doesn't trigger it.
-	static bool IsUsable(Line l)
+	static bool IsDoor(Line l)
 	{
 		if (!(l.activation & (SPAC_Use | SPAC_UseThrough))) return false;
 		switch (l.special)
@@ -487,6 +485,12 @@ class DDShip : PlayerPawn
 				return true;
 		}
 		return false;
+	}
+
+	// Any other line the use key would activate: switches, lifts, exits.
+	static bool IsSwitch(Line l)
+	{
+		return l.special != 0 && (l.activation & (SPAC_Use | SPAC_UseThrough)) && !IsDoor(l);
 	}
 
 	//======================================================================

@@ -199,19 +199,47 @@ class DDProjectile : Actor
 		return false;
 	}
 
+	// Shots this close to a switch count as hitting it: the guns sit either
+	// side of the reticle, so both bolts can straddle a narrow switch.
+	const SWITCH_SHOT_SLACK = 24;
+
 	// In Descent you press switches by shooting them.  A player's shot that
-	// hits a usable line other than a door activates it, as the use key
-	// would (doors still open by flying into them).
+	// lands on (or right next to) a switch activates it, as the use key
+	// would; doors still open by flying into them.
 	void ShootSwitch()
 	{
+		if (target == null || target.player == null) return;
 		Line l = BlockingLine;
-		if (l == null || l.special == 0 || target == null || target.player == null) return;
-		if (!(l.activation & (SPAC_Use | SPAC_UseThrough)) || DDShip.IsUsable(l)) return;
+		if (l == null || !DDShip.IsSwitch(l))
+			l = NearestSwitch(SWITCH_SHOT_SLACK);
+		if (l == null) return;
 		// Level exits only count when the ship is close, so a stray shot
 		// across a big room doesn't end the level.
 		if (IsExit(l) && target.Distance3D(self) > EXIT_SHOT_RANGE) return;
 		int side = Level.PointOnLineSide(target.pos.xy, l);
 		l.Activate(target, side, SPAC_Use);
+	}
+
+	Line NearestSwitch(double maxDist)
+	{
+		Line best = null;
+		double bestDist = maxDist;
+		let it = BlockLinesIterator.Create(self, maxDist);
+		while (it.Next())
+		{
+			Line l = it.CurLine;
+			if (!DDShip.IsSwitch(l)) continue;
+			double len2 = l.delta dot l.delta;
+			if (len2 <= 0) continue;
+			double t = clamp(((pos.xy - l.v1.p) dot l.delta) / len2, 0, 1);
+			double d = (l.v1.p + l.delta * t - pos.xy).Length();
+			if (d <= bestDist)
+			{
+				bestDist = d;
+				best = l;
+			}
+		}
+		return best;
 	}
 }
 
