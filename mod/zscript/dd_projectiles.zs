@@ -184,6 +184,21 @@ class DDProjectile : Actor
 
 	virtual void OnImpact() {}
 
+	const EXIT_SHOT_RANGE = 200;
+
+	static bool IsExit(Line l)
+	{
+		switch (l.special)
+		{
+			case 74:  // Teleport_NewMap
+			case 75:  // Teleport_EndGame
+			case 243: // Exit_Normal
+			case 244: // Exit_Secret
+				return true;
+		}
+		return false;
+	}
+
 	// In Descent you press switches by shooting them.  A player's shot that
 	// hits a usable line other than a door activates it, as the use key
 	// would (doors still open by flying into them).
@@ -192,6 +207,9 @@ class DDProjectile : Actor
 		Line l = BlockingLine;
 		if (l == null || l.special == 0 || target == null || target.player == null) return;
 		if (!(l.activation & (SPAC_Use | SPAC_UseThrough)) || DDShip.IsUsable(l)) return;
+		// Level exits only count when the ship is close, so a stray shot
+		// across a big room doesn't end the level.
+		if (IsExit(l) && target.Distance3D(self) > EXIT_SHOT_RANGE) return;
 		int side = Level.PointOnLineSide(target.pos.xy, l);
 		l.Activate(target, side, SPAC_Use);
 	}

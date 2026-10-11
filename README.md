@@ -22,8 +22,9 @@ becomes Descent's ship:
   powerups: health becomes shields, armour and cells become energy, and Doom
   weapons become Descent weapons.
 - **Doors** open when you fly into them, and **switches** are pressed by
-  shooting them, as in Descent. The use key works on both (and has a longer
-  reach than Doomguy's).
+  shooting them, as in Descent. Exit switches only count when you shoot them
+  from close by (about 200 units), so a stray shot can't end the level. The
+  use key works on both, with a longer reach than Doomguy's.
 
 ## What you need
 
