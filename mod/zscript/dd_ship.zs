@@ -418,6 +418,16 @@ class DDShip : PlayerPawn
 	//======================================================================
 	// Per-tic logic
 
+	// Heretic's wind (and Boom's wind/current pushers) push anything with
+	// WINDTHRUST, at any height.  Over Heretic's water that reads as a
+	// current, so it only moves the ship while it is down on the floor or
+	// water surface.  (Scrolling "carry" floors already ignore flying things.)
+	override void Tick()
+	{
+		bWindThrust = pos.z - floorz < 4;
+		Super.Tick();
+	}
+
 	override void PlayerThink()
 	{
 		Super.PlayerThink();
