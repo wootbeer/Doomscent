@@ -3,6 +3,8 @@
 Doom plus Descent: fly the Pyro-GX through Doom's levels with Descent's
 six-degrees-of-freedom flight, cockpit and weapons.
 
+▶ **[Watch it in action on YouTube](https://www.youtube.com/watch?v=-WYTXA3c60Q)**
+
 Doomscent is a mod for an unmodified [GZDoom](https://zdoom.org/downloads)
 (4.14 or newer). Doom monsters, maps and music stay as they are. The player
 becomes Descent's ship:
@@ -80,9 +82,9 @@ python tools/ddconvert.py data -o dd_descent_assets.pk3
 gzdoom -iwad DOOM2.WAD -file dd_descent_assets.pk3 doomscent.pk3
 ```
 
-To make a release, set `VERSION`, add a `CHANGELOG.md` entry, and push a tag
-`v<VERSION>`: the Release workflow builds `ddconvert.exe` and the zip and
-publishes them.
+To make a release, set `VERSION` and add a `CHANGELOG.md` entry, then either
+push a tag `v<VERSION>` or run the Release workflow from the Actions tab with
+"publish" ticked. It builds `ddconvert.exe` and the zip and publishes them.
 
 ## Controls
 
