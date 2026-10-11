@@ -207,7 +207,21 @@ class DDShip : PlayerPawn
 		Vector3 rotThrust = (0, 0, bankIn * DD.SHIP_MAX_ROTTHRUST);
 		rotVel = SimulateDrag(rotVel, rotThrust / DD.SHIP_MASS, DD.SHIP_DRAG * 5 / 2, dt);
 
-		Rotate(pitchIn + rotVel.x * 360 * dt, -yawIn + rotVel.y * 360 * dt, rotVel.z * 360 * dt);
+		// Mouse/turn keys.  Near level flight, turn about the world's
+		// vertical axis like Doom: the horizon stays straight and the view
+		// matches what GZDoom draws between tics.  Rolled over, or with
+		// dd_levelturn off, turn about the ship's own axes like Descent.
+		if (CVar.GetCVar('dd_levelturn', player).GetBool() && abs(CurrentRoll()) < 45 && abs(fwd.z) < 0.98)
+		{
+			Rotate(pitchIn, 0, 0);
+			RotateWorldZ(yawIn);
+		}
+		else
+		{
+			Rotate(pitchIn, -yawIn, 0);
+		}
+		// Descent's rotational physics (banking keys, knocks from hits).
+		Rotate(rotVel.x * 360 * dt, rotVel.y * 360 * dt, rotVel.z * 360 * dt);
 
 		if (bankIn == 0 && CVar.GetCVar('dd_autolevel', player).GetBool())
 			LevelShip(DD.ROLL_RATE * 360 * dt);
@@ -294,6 +308,19 @@ class DDShip : PlayerPawn
 		up = rgt cross fwd;
 	}
 
+	// Turn about the world's vertical axis (degrees, + = left).
+	void RotateWorldZ(double deg)
+	{
+		if (deg == 0) return;
+		double c = cos(deg), s = sin(deg);
+		fwd = (fwd.x * c - fwd.y * s, fwd.x * s + fwd.y * c, fwd.z);
+		rgt = (rgt.x * c - rgt.y * s, rgt.x * s + rgt.y * c, rgt.z);
+		up = (up.x * c - up.y * s, up.x * s + up.y * c, up.z);
+		fwd = fwd.Unit();
+		rgt = (fwd cross up).Unit();
+		up = rgt cross fwd;
+	}
+
 	// Roll back toward the world's up direction by at most maxDeg.
 	void LevelShip(double maxDeg)
 	{
@@ -335,7 +362,7 @@ class DDShip : PlayerPawn
 
 		// Visual bank into turns (PF_TURNROLL).  It goes in the view-roll
 		// offset, which the renderer interpolates on its own.
-		if (CVar.GetCVar('dd_turnroll', player).GetBool())
+		if (CVar.GetCVar('dd_bankturns', player).GetBool())
 		{
 			// Descent's formula, capped: mouse turns can be much faster
 			// than Descent's keyboard turning.

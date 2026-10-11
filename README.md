@@ -92,7 +92,8 @@ The **Doomscent Options** menu also has:
 
 - thrust and weapon damage multipliers (mouse speed is GZDoom's own mouse
   sensitivity setting);
-- banking into turns;
+- level (Doom-style) turning or Descent-style ship-axis turning;
+- banking into turns (off by default);
 - auto-levelling;
 - bump-to-open doors;
 - the cockpit on or off.

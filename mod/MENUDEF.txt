@@ -7,7 +7,8 @@ OptionMenu "DDOptions"
 {
 	Title "Doomscent"
 	StaticText "Ship"
-	Option "Bank into turns", "dd_turnroll", "OnOff"
+	Option "Level turning (Doom-style)", "dd_levelturn", "OnOff"
+	Option "Bank into turns", "dd_bankturns", "OnOff"
 	Option "Auto-level", "dd_autolevel", "OnOff"
 	Slider "Thrust", "dd_thrust", 0.5, 3.0, 0.1, 1
 	StaticText ""

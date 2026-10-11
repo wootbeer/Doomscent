@@ -1,7 +1,12 @@
 // Doomscent settings (see the "Doomscent Options" menu)
 
 // Bank the view into turns, like Descent's PF_TURNROLL.
-user bool dd_turnroll = true;
+user bool dd_bankturns = false;
+
+// Near level flight, turn about the world's vertical axis (Doom-style) so
+// the horizon stays straight.  Off: always turn about the ship's own axes,
+// as in Descent.
+user bool dd_levelturn = true;
 
 // Slowly roll the ship back level when not banking.
 user bool dd_autolevel = false;
