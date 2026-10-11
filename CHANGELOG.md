@@ -1,3 +1,9 @@
+# Unreleased
+
+- Chex Quest (`chex.wad`, `chex3.wad`) and other games or mods built on
+  Doom's items get Descent's powerups and weapons too; Chex Quest's keys open
+  its doors
+
 # Doomscent 0.1.0
 
 First release: fly Descent's Pyro-GX through Doom's levels.

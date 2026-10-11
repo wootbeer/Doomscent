@@ -37,8 +37,8 @@ becomes Descent's ship:
    anywhere, e.g. `C:\Games\Doomscent`.
 2. Copy your game files into its `data` folder:
    - a Doom IWAD: `DOOM.WAD`, `DOOM2.WAD`, `TNT.WAD`, `PLUTONIA.WAD`, the
-     shareware `DOOM1.WAD`, or [Freedoom](https://freedoom.github.io/)'s
-     `freedoom2.wad`;
+     shareware `DOOM1.WAD`, [Freedoom](https://freedoom.github.io/)'s
+     `freedoom2.wad`, or Chex Quest's `chex.wad` / `chex3.wad`;
    - `DESCENT.HOG` and `DESCENT.PIG` from Descent 1 (registered 1.4/1.5 is
      tested; shareware should work but is untested).
 3. Double-click `Doomscent.bat`.
@@ -142,6 +142,12 @@ The **Doomscent Options** menu also has:
 | Invulnerability / partial invisibility | Invulnerability / cloak |
 | Backpack | Supply pack (vulcan ammo, missiles, bombs, energy) |
 | Keys | Descent keys (still open Doom's locked doors) |
+
+Games and mods built on Doom's items get the same treatment: in Chex Quest,
+for example, the Large Zorcher becomes the spreadfire and a glass of water a
+shield bonus. Heretic, Hexen and Strife use different items and aren't
+supported. Custom PWADs (`-file mymap.wad`) work as long as they use Doom's
+items and monsters.
 
 ## Repository layout
 

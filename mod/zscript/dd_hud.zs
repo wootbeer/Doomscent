@@ -149,7 +149,8 @@ class DDStatusBar : BaseStatusBar
 
 	bool HasKey(Name card, Name skull)
 	{
-		return CPlayer.mo.FindInventory(card) != null || CPlayer.mo.FindInventory(skull) != null;
+		// Subclasses count too (Chex Quest's ChexBlueCard is a BlueCard).
+		return CPlayer.mo.FindInventory(card, true) != null || CPlayer.mo.FindInventory(skull, true) != null;
 	}
 
 	void DrawWeaponBoxes(DDShip ship)

@@ -5,8 +5,25 @@ class DDEventHandler : EventHandler
 	override void CheckReplacement(ReplaceEvent e)
 	{
 		if (e.IsFinal) return;
+		// Walk up the class tree so games built on Doom's actors (Chex Quest's
+		// Large Zorcher is a Shotgun, its glass of water a HealthBonus...)
+		// get the same replacements.  The class itself is checked first, so
+		// ClipBox matches before its parent Clip.
+		for (class<Actor> cls = e.Replacee; cls != null; cls = (class<Actor>)(cls.GetParentClass()))
+		{
+			Name rep = DoomReplacement(cls.GetClassName());
+			if (rep != 'None')
+			{
+				e.Replacement = rep;
+				return;
+			}
+		}
+	}
+
+	static Name DoomReplacement(Name cls)
+	{
 		Name rep = 'None';
-		switch (e.Replacee.GetClassName())
+		switch (cls)
 		{
 			// Weapons
 			case 'Chainsaw':        rep = 'DDLaserUpgrade'; break;
@@ -51,9 +68,13 @@ class DDEventHandler : EventHandler
 			case 'YellowSkull':     rep = 'DDYellowSkull'; break;
 			case 'RedCard':         rep = 'DDRedCard'; break;
 			case 'RedSkull':        rep = 'DDRedSkull'; break;
+		
+			// Chex Quest: its locks want its own key classes.
+			case 'ChexBlueCard':    rep = 'DDChexBlueCard'; break;
+			case 'ChexYellowCard':  rep = 'DDChexYellowCard'; break;
+			case 'ChexRedCard':     rep = 'DDChexRedCard'; break;
 		}
-		if (rep != 'None')
-			e.Replacement = rep;
+		return rep;
 	}
 
 	override void NetworkProcess(ConsoleEvent e)

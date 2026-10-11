@@ -760,3 +760,20 @@ class DDRedSkull : DDKey
 	Default { DDKey.KeyType "RedSkull"; Inventory.PickupMessage "$GOTREDSKUL"; }
 	States { Spawn: DP26 ABCDEFGHIJKLMNO 2; Loop; }
 }
+
+// Chex Quest's keys (its locks only accept these).
+class DDChexBlueCard : DDKey
+{
+	Default { DDKey.KeyType "ChexBlueCard"; Inventory.PickupMessage "$GOTBLUECARD"; }
+	States { Spawn: DP24 ABCDEFGHIJKLMNO 2; Loop; }
+}
+class DDChexYellowCard : DDKey
+{
+	Default { DDKey.KeyType "ChexYellowCard"; Inventory.PickupMessage "$GOTYELWCARD"; }
+	States { Spawn: DP25 ABCDEFGHIJKLMNO 2; Loop; }
+}
+class DDChexRedCard : DDKey
+{
+	Default { DDKey.KeyType "ChexRedCard"; Inventory.PickupMessage "$GOTREDCARD"; }
+	States { Spawn: DP26 ABCDEFGHIJKLMNO 2; Loop; }
+}
