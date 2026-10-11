@@ -1,8 +1,12 @@
 # Unreleased
 
-- Chex Quest (`chex.wad`, `chex3.wad`) and other games or mods built on
-  Doom's items get Descent's powerups and weapons too; Chex Quest's keys open
-  its doors
+- **Chexscent, Herescent and Hexscent**: Chex Quest, Heretic and Hexen are
+  playable, with their weapons, ammo and items replaced by Descent's
+- Inventory bar and selected-item display for Heretic/Hexen artifacts and
+  puzzle items; icons for keys Descent has no light for
+- Descent's ship bob ("wiggle"), on by default, toggle in the options
+- The supply pack (Doom's backpack) uses a Descent sprite, so it shows in
+  every game
 
 # Doomscent 0.1.0
 

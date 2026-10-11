@@ -69,6 +69,70 @@ class DDEventHandler : EventHandler
 			case 'RedCard':         rep = 'DDRedCard'; break;
 			case 'RedSkull':        rep = 'DDRedSkull'; break;
 		
+			// Heretic (Raven's items shared with Hexen are below).  By role:
+			// staff/gauntlets/wand/crossbow/claw/phoenix/hellstaff/firemace
+			// line up with Doom's fist/chainsaw/pistol/shotgun/chaingun/
+			// rocket launcher/plasma/BFG.
+			case 'Gauntlets':       rep = 'DDLaserUpgrade'; break;
+			case 'Crossbow':        rep = 'DDSpreadfirePowerup'; break;
+			case 'Blaster':         rep = 'DDVulcanPowerup'; break;
+			case 'PhoenixRod':      rep = 'DDSmartPowerup'; break;
+			case 'SkullRod':        rep = 'DDPlasmaPowerup'; break;
+			case 'Mace':            rep = 'DDFusionPowerup'; break;
+			case 'GoldWandAmmo':    rep = 'DDVulcanAmmoPowerup'; break;
+			case 'GoldWandHefty':   rep = 'DDVulcanAmmoBox'; break;
+			case 'BlasterAmmo':     rep = 'DDVulcanAmmoPowerup'; break;
+			case 'BlasterHefty':    rep = 'DDVulcanAmmoBox'; break;
+			case 'CrossbowAmmo':    rep = 'DDConcussion1'; break;
+			case 'CrossbowHefty':   rep = 'DDConcussion4'; break;
+			case 'PhoenixRodAmmo':  rep = 'DDHoming1'; break;
+			case 'PhoenixRodHefty': rep = 'DDHoming4'; break;
+			case 'SkullRodAmmo':    rep = 'DDEnergyBoost'; break;
+			case 'SkullRodHefty':   rep = 'DDEnergyLarge'; break;
+			case 'MaceAmmo':        rep = 'DDEnergyBoost'; break;
+			case 'MaceHefty':       rep = 'DDEnergyLarge'; break;
+			case 'BagOfHolding':    rep = 'DDBackpack'; break;
+			case 'SilverShield':    rep = 'DDEnergyPack'; break;
+			case 'EnchantedShield': rep = 'DDEnergyLarge'; break;
+			case 'ArtiTomeOfPower': rep = 'DDLaserUpgrade'; break;
+			case 'ArtiInvisibility': rep = 'DDCloak'; break;
+
+			// Heretic and Hexen
+			case 'CrystalVial':     rep = 'DDShieldBoost'; break;
+			case 'ArtiHealth':      rep = 'DDShieldDouble'; break;
+			case 'ArtiSuperHealth': rep = 'DDShieldMega'; break;
+			case 'ArtiFly':         rep = 'DDEnergyPack'; break;   // the ship already flies
+			case 'ArtiInvulnerability':  rep = 'DDInvulnerability'; break;
+			case 'ArtiInvulnerability2': rep = 'DDInvulnerability'; break;
+
+			// Hexen.  Each class's second and third weapons become spreadfire
+			// and plasma; the pieces of the fourth become the fusion cannon
+			// (extra pieces then give energy, like a weapon you already have).
+			case 'FWeapAxe':        rep = 'DDSpreadfirePowerup'; break;
+			case 'CWeapStaff':      rep = 'DDSpreadfirePowerup'; break;
+			case 'MWeapFrost':      rep = 'DDSpreadfirePowerup'; break;
+			case 'FWeapHammer':     rep = 'DDPlasmaPowerup'; break;
+			case 'CWeapFlame':      rep = 'DDPlasmaPowerup'; break;
+			case 'MWeapLightning':  rep = 'DDPlasmaPowerup'; break;
+			case 'FighterWeaponPiece': rep = 'DDFusionPowerup'; break;
+			case 'ClericWeaponPiece':  rep = 'DDFusionPowerup'; break;
+			case 'MageWeaponPiece':    rep = 'DDFusionPowerup'; break;
+			case 'Mana1':           rep = 'DDEnergyBoost'; break;
+			case 'Mana2':           rep = 'DDVulcanAmmoPowerup'; break;
+			case 'Mana3':           rep = 'DDEnergyPack'; break;
+			case 'ArtiBoostMana':   rep = 'DDEnergyLarge'; break;
+			case 'MeshArmor':       rep = 'DDEnergyPack'; break;
+			case 'FalconShield':    rep = 'DDEnergyPack'; break;
+			case 'PlatinumHelm':    rep = 'DDEnergyPack'; break;
+			case 'AmuletOfWarding': rep = 'DDEnergyPack'; break;
+			case 'ArtiBoostArmor':  rep = 'DDEnergyLarge'; break;
+			case 'ArtiSpeedBoots':  rep = 'DDEnergyPack'; break;
+			case 'ArtiHealingRadius': rep = 'DDShieldDouble'; break;
+			// Hexen has no missile pickups; flechettes and banishment
+			// devices are common, so they supply them (one at a time).
+			case 'ArtiPoisonBag':   rep = 'DDConcussion1'; break;
+			case 'ArtiTeleportOther': rep = 'DDHoming1'; break;
+
 			// Chex Quest: its locks want its own key classes.
 			case 'ChexBlueCard':    rep = 'DDChexBlueCard'; break;
 			case 'ChexYellowCard':  rep = 'DDChexYellowCard'; break;

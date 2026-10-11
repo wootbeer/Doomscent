@@ -6,7 +6,7 @@
 class DDStatusBar : BaseStatusBar
 {
 	TextureID texCockpit;
-	Font hudFont;
+	Font gaugeFont;
 
 	override void Init()
 	{
@@ -15,11 +15,11 @@ class DDStatusBar : BaseStatusBar
 		SetSize(0, 320, 200);
 		texCockpit = TexMan.CheckForTexture("DDCOCKPT", TexMan.Type_Any);
 		// Descent's own gauge font if the asset pack has it.
-		hudFont = Font.GetFont('ddsmall');
+		gaugeFont = Font.GetFont('ddsmall');
 		fontScale = 1.0;
-		if (hudFont == null)
+		if (gaugeFont == null)
 		{
-			hudFont = SmallFont;
+			gaugeFont = SmallFont;
 			fontScale = 0.55;
 		}
 	}
@@ -44,12 +44,17 @@ class DDStatusBar : BaseStatusBar
 		DrawReticle(ship);
 		DrawHudMessage(ship);
 
+		// 320x200 virtual screen, like the cockpit.
+		BeginHUD(1, true, 320, 200);
+		DrawOtherKeys(!cockpit);
+		DrawInventory();
+
 		// Without mouselook the mouse moves the ship instead of aiming it.
 		if (!CVar.GetCVar('freelook', CPlayer).GetBool())
 		{
 			SetupScale();
 			String msg = StringTable.Localize("$DD_FREELOOK");
-			Txt(msg, 160 - hudFont.StringWidth(msg) * fontScale * 0.65, 20, COL_ENERGY, 1.3);
+			Txt(msg, 160 - gaugeFont.StringWidth(msg) * fontScale * 0.65, 20, COL_ENERGY, 1.3);
 		}
 	}
 
@@ -89,13 +94,13 @@ class DDStatusBar : BaseStatusBar
 	void Txt(String s, double x, double y, Color col, double scale = 1.0)
 	{
 		scale *= fontScale;
-		Screen.DrawText(hudFont, Font.CR_UNTRANSLATED, x * sx, y * sy, s,
+		Screen.DrawText(gaugeFont, Font.CR_UNTRANSLATED, x * sx, y * sy, s,
 			DTA_ScaleX, sx * scale, DTA_ScaleY, sy * scale, DTA_Color, col);
 	}
 
 	void TxtRight(String s, double right, double y, Color color, double scale = 1.0)
 	{
-		double w = hudFont.StringWidth(s) * scale * fontScale;
+		double w = gaugeFont.StringWidth(s) * scale * fontScale;
 		Txt(s, right - w, y, color, scale);
 	}
 
@@ -137,8 +142,8 @@ class DDStatusBar : BaseStatusBar
 		Pic("DDSHIP", 151, 160);
 
 		// Keys (draw_keys).
-		Pic(HasKey('BlueCard', 'BlueSkull') ? "DDKEYB" : "DDKEYB0", 45, 152);
-		Pic(HasKey('YellowCard', 'YellowSkull') ? "DDKEYY" : "DDKEYY0", 44, 162);
+		Pic(HasKey('BlueCard', 'BlueSkull', 'KeyBlue') ? "DDKEYB" : "DDKEYB0", 45, 152);
+		Pic(HasKey('YellowCard', 'YellowSkull', 'KeyYellow') ? "DDKEYY" : "DDKEYY0", 44, 162);
 		Pic(HasKey('RedCard', 'RedSkull') ? "DDKEYR" : "DDKEYR0", 43, 172);
 
 		// Homing warning light.
@@ -147,10 +152,61 @@ class DDStatusBar : BaseStatusBar
 		DrawWeaponBoxes(ship);
 	}
 
-	bool HasKey(Name card, Name skull)
+	// Subclasses count too (Chex Quest's ChexBlueCard is a BlueCard); the
+	// third name is Heretic's key of that colour.
+	bool HasKey(Name card, Name skull, Name heretic = 'None')
 	{
-		// Subclasses count too (Chex Quest's ChexBlueCard is a BlueCard).
-		return CPlayer.mo.FindInventory(card, true) != null || CPlayer.mo.FindInventory(skull, true) != null;
+		if (CPlayer.mo.FindInventory(card, true) || CPlayer.mo.FindInventory(skull, true)) return true;
+		return heretic != 'None' && CPlayer.mo.FindInventory(heretic, true);
+	}
+
+	// Keys Descent has no light for (Heretic's green key, Hexen's keys) are
+	// shown as their own icons along the top left.
+	static bool HasDescentLight(Inventory k)
+	{
+		static const Name lit[] = { 'BlueCard', 'BlueSkull', 'KeyBlue', 'YellowCard', 'YellowSkull', 'KeyYellow', 'RedCard', 'RedSkull' };
+		for (int i = 0; i < lit.Size(); i++)
+		{
+			class<Inventory> c = lit[i];
+			if (c && k is c) return true;
+		}
+		return false;
+	}
+
+	void DrawOtherKeys(bool includeLit)
+	{
+		double x = 4;
+		for (let item = CPlayer.mo.Inv; item; item = item.Inv)
+		{
+			if (!(item is 'Key') || !item.Icon.IsValid()) continue;
+			if (!includeLit && HasDescentLight(item)) continue;
+			DrawInventoryIcon(item, (x, 4), DI_SCREEN_LEFT_TOP | DI_ITEM_LEFT_TOP, 1.0, (10, 10));
+			x += 12;
+		}
+	}
+
+	// Heretic/Hexen artifacts and puzzle items: GZDoom's inventory bar
+	// while browsing ([ and ]), otherwise the selected item at top right.
+	InventoryBarState invBar;
+	HUDFont invFont;
+
+	void DrawInventory()
+	{
+		if (invBar == null)
+		{
+			invFont = HUDFont.Create(gaugeFont);
+			invBar = InventoryBarState.Create(invFont);
+		}
+		if (isInventoryBarVisible())
+		{
+			DrawInventoryBar(invBar, (0, 24), 7, DI_SCREEN_CENTER_TOP, 0.7);
+			return;
+		}
+		let sel = CPlayer.mo.InvSel;
+		if (sel == null || !sel.Icon.IsValid()) return;
+		DrawInventoryIcon(sel, (-16, 16), DI_SCREEN_RIGHT_TOP | DI_ITEM_CENTER, 1.0, (20, 20));
+		if (sel.Amount > 1)
+			DrawString(invFont, FormatNumber(sel.Amount), (-4, 24), DI_SCREEN_RIGHT_TOP | DI_TEXT_ALIGN_RIGHT, Font.CR_GOLD);
 	}
 
 	void DrawWeaponBoxes(DDShip ship)
@@ -204,19 +260,6 @@ class DDStatusBar : BaseStatusBar
 		TxtRight(p, 316, 178, COL_WEAPON, 1.3);
 		TxtRight(String.Format("%s: %d", DD.SecondaryName(ship.secondary), ship.CountInv(DD.SecondaryAmmo(ship.secondary))),
 			316, 186, COL_WEAPON, 1.3);
-
-		int kx = 4;
-		static const Name cards[] = { 'BlueCard', 'YellowCard', 'RedCard' };
-		static const Name skulls[] = { 'BlueSkull', 'YellowSkull', 'RedSkull' };
-		static const String icons[] = { "DDKICB", "DDKICY", "DDKICR" };
-		for (int i = 0; i < 3; i++)
-		{
-			if (HasKey(cards[i], skulls[i]))
-			{
-				Pic(icons[i], kx, 4);
-				kx += 10;
-			}
-		}
 	}
 
 	// Descent's HUD message line, centred at the top of the screen.
@@ -224,7 +267,7 @@ class DDStatusBar : BaseStatusBar
 	{
 		if (ship.msgText.Length() == 0 || ship.shipTics - ship.msgTime > 70) return;
 		SetupScale();
-		double w = hudFont.StringWidth(ship.msgText) * fontScale;
+		double w = gaugeFont.StringWidth(ship.msgText) * fontScale;
 		Txt(ship.msgText, 160 - w / 2, 4, COL_MESSAGE);
 	}
 

@@ -634,11 +634,13 @@ class DDBackpack : DDPowerup
 		DDPowerup.PowSize 3;
 	}
 
+	// Descent has no backpack; use its ammo pack sprite (Doom's BPAK
+	// sprite doesn't exist in Heretic, Hexen or Chex Quest).
 	States
 	{
 	Spawn:
-		BPAK A -1;
-		Stop;
+		DP46 ABCDEFGHIJKLMNO 3;
+		Loop;
 	Pickup:
 		TNT1 A 0
 		{
@@ -651,11 +653,6 @@ class DDBackpack : DDPowerup
 		Stop;
 	}
 
-	override void PostBeginPlay()
-	{
-		Super.PostBeginPlay();
-		Scale = (1, 1);
-	}
 }
 
 // Invulnerability and cloak use Doom's powers with Descent sprites.

@@ -55,6 +55,9 @@ class DDShip : PlayerPawn
 		Player.ViewHeight 16;
 		Player.AttackZOffset 0;
 		Player.UseRange 96;
+		// Hexen spawns weapons per player class; spawn the Fighter's so
+		// there aren't three copies of everything.
+		Player.SpawnClass "Fighter";
 		Player.MaxHealth 200;
 		Player.ForwardMove 0, 0;
 		Player.SideMove 0, 0;
@@ -247,6 +250,17 @@ class DDShip : PlayerPawn
 
 		double thrustScale = CVar.GetCVar('dd_thrust', player).GetFloat();
 		Vector3 accel = thrustDir * (DD.SHIP_MAX_THRUST * thrustScale / DD.SHIP_MASS * DD.SCALE);
+
+		// PF_WIGGLE: Descent nudges the ship along its up axis by
+		// wiggle * sin(GameTime) every frame (one cycle per second).  Here
+		// that is spread over the physics steps as an acceleration, sized
+		// for the ~30fps Descent ran at, so it is the same at any frame rate.
+		// It moves the ship itself, which GZDoom draws smoothly between tics.
+		if (CVar.GetCVar('dd_wiggle', player).GetBool())
+		{
+			double wiggle = DD.SHIP_WIGGLE * 30 * DD.PHYS_STEP * sin(360. * shipTics * DD.TIC);
+			accel += up * (wiggle * DD.SCALE);
+		}
 		shipVel = SimulateDrag(shipVel, accel, DD.SHIP_DRAG, dt);
 		Vel = shipVel / TICRATE;
 
