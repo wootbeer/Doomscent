@@ -1,4 +1,7 @@
-# Unreleased
+# Doomscent 0.2.0
+
+Chexscent, Herescent and Hexscent: the Pyro-GX now flies through Chex Quest,
+Heretic and Hexen as well as Doom.
 
 - **Chexscent, Herescent and Hexscent**: Chex Quest, Heretic and Hexen are
   playable, with their weapons, ammo and items replaced by Descent's
