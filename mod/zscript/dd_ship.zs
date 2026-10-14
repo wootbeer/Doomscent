@@ -19,6 +19,9 @@ class DDShip : PlayerPawn
 	double yawRate;          // smoothed turning rate, degrees per second
 	double bankInput;        // this tic's bank keys (-1..1)
 	bool directView;         // renderer previews the mouse every frame
+	bool rearView;           // looking backwards (Descent's rear view key)
+	bool rearViewChanged;
+	int rearViewSince;
 	double pendingYaw;       // mouse momentum: turn still to be made (degrees)
 	double pendingPitch;
 	bool aimMomentum;
@@ -136,12 +139,14 @@ class DDShip : PlayerPawn
 	override void Travelled()
 	{
 		Super.Travelled();
+		SetRearView(false);
 		ResetOrientation();
 	}
 
 	override void OnRespawn()
 	{
 		Super.OnRespawn();
+		SetRearView(false);
 		ResetOrientation();
 		laserLevel = 0;
 		quadLasers = false;
@@ -414,12 +419,29 @@ class DDShip : PlayerPawn
 		{
 			turnRoll = 0;
 		}
-		ViewRoll = turnRoll;
-		player.cheats |= CF_INTERPVIEWANGLES;
 
 		// The Euler angles flip when passing straight up or down; don't
 		// interpolate across that or the frame in between spins.
 		bool flipped = abs(deltaangle(Angle, newAngle)) > 90 || abs(deltaangle(Roll, newRoll)) > 90;
+
+		// View offsets on top of the ship's angles: the bank into turns, and
+		// the rear view.  Looking back is a half turn about the ship's own up
+		// axis, which in yaw/pitch/roll terms is yaw + 180, pitch and roll
+		// mirrored.
+		if (rearView)
+		{
+			ViewAngle = 180;
+			ViewPitch = -2 * newPitch;
+			ViewRoll = -2 * newRoll - turnRoll;
+		}
+		else
+		{
+			ViewAngle = 0;
+			ViewPitch = 0;
+			ViewRoll = turnRoll;
+		}
+		if (!flipped && !rearViewChanged) player.cheats |= CF_INTERPVIEWANGLES;
+		rearViewChanged = false;
 
 		// How the renderer turns the view between tics:
 		//  - direct: GZDoom's own path, which adds not-yet-processed mouse
@@ -429,9 +451,10 @@ class DDShip : PlayerPawn
 		//  - interpolated: blend the last two tics.  Correct in any
 		//    orientation, one tic behind the mouse.
 		double rollLimit = directView ? 20 : 10;
-		// With mouse momentum the ship lags the mouse on purpose, so GZDoom's
-		// raw mouse preview would fight it; always interpolate then.
-		directView = !aimMomentum && abs(newRoll) < rollLimit && abs(newPitch) < 80 && bankInput == 0
+		// With mouse momentum the ship lags the mouse on purpose, and in the
+		// rear view the preview would pitch the wrong way, so always
+		// interpolate then.
+		directView = !aimMomentum && !rearView && abs(newRoll) < rollLimit && abs(newPitch) < 80 && bankInput == 0
 			&& abs(rotVel.x) < 0.02 && abs(rotVel.y) < 0.02 && abs(rotVel.z) < 0.02;
 
 		player.MinPitch = -90;
@@ -440,6 +463,28 @@ class DDShip : PlayerPawn
 		Pitch = newPitch;
 		Roll = newRoll;
 		if (!directView && !flipped) player.cheats |= CF_INTERPVIEW;
+	}
+
+	// check_rear_view(): a tap toggles the rear view; holding the key
+	// longer than a quarter second makes it last only while held.
+	void RearViewKey(bool down)
+	{
+		if (down)
+		{
+			SetRearView(!rearView);
+			rearViewSince = shipTics;
+		}
+		else if (rearView && shipTics - rearViewSince > 35 / 4)
+		{
+			SetRearView(false);
+		}
+	}
+
+	void SetRearView(bool on)
+	{
+		if (on == rearView) return;
+		rearView = on;
+		rearViewChanged = true;
 	}
 
 	//======================================================================
@@ -994,6 +1039,8 @@ class DDShip : PlayerPawn
 
 	void A_DDShipDeath()
 	{
+		SetRearView(false);
+		ViewAngle = ViewPitch = ViewRoll = 0;
 		let fx = DDEffect(Spawn('DDEffect', pos + (0, 0, Height / 2), ALLOW_REPLACE));
 		if (fx) fx.Setup(0, 40);
 		bNoGravity = false;

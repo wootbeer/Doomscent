@@ -15,7 +15,8 @@ becomes Descent's ship:
   Movement uses Descent's own physics (thrust 7.8, mass 4, drag 0.033,
   rotational drag, the bank when turning), ported from the Descent 1 source.
 - **Descent's cockpit.** Energy and shield gauges, the shield ring, key
-  lights, weapon boxes and the reticle, laid out as in Descent.
+  lights, weapon boxes and the reticle, laid out as in Descent, plus the
+  rear view and Descent's message line for all game messages.
 - **Descent's weapons.**
   - Primaries: lasers (levels 1-4 plus quad), vulcan, spreadfire, plasma, and
     fusion (charge by holding fire).
@@ -107,6 +108,7 @@ Bind Descent-style keys** sets up the full layout:
 | Cycle secondary | Middle mouse button |
 | Fire flare | F |
 | Drop proximity bomb | B |
+| Rear view (tap to toggle, hold to peek) | V |
 | Level the ship | Z |
 | Use (or fly into doors/switches, or shoot switches) | R |
 

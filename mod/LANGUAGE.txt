@@ -43,3 +43,4 @@ DD_GOTCLOAK = "Cloaking device!";
 DD_FREELOOK = "Turn on mouselook (Options > Doomscent > Bind Descent-style keys)";
 DD_ENERGYTO = "Energy boosted to %d";
 DD_SHIELDTO = "Shield boosted to %d";
+DD_REARVIEW = "REAR VIEW";
