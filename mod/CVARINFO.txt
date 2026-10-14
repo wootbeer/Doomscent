@@ -8,6 +8,10 @@ user bool dd_bankturns = false;
 // as in Descent.
 user bool dd_levelturn = true;
 
+// Mouse aiming with Descent-style momentum: turns ease in and out instead
+// of stopping dead (the total turn is the same).
+user bool dd_mousemomentum = false;
+
 // Descent's gentle up-and-down bob of the ship.
 user bool dd_wiggle = true;
 

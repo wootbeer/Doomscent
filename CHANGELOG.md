@@ -1,3 +1,9 @@
+# Unreleased
+
+- Optional mouse momentum (Options → Doomscent Options → Mouse momentum):
+  mouse turns ease in and out like Descent's rotational physics instead of
+  stopping dead; the total turn is unchanged
+
 # Doomscent 0.2.1
 
 - Heretic's wind and water currents (and Boom wind/current pushers) only

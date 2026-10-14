@@ -117,6 +117,8 @@ The **Doomscent Options** menu also has:
 - thrust and weapon damage multipliers (mouse speed is GZDoom's own mouse
   sensitivity setting);
 - level (Doom-style) turning or Descent-style ship-axis turning;
+- mouse momentum (off by default): turns ease in and out like Descent's
+  instead of stopping dead;
 - the ship's gentle Descent bob (on by default);
 - banking into turns (off by default);
 - auto-levelling;

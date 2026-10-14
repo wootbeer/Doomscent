@@ -19,6 +19,9 @@ class DDShip : PlayerPawn
 	double yawRate;          // smoothed turning rate, degrees per second
 	double bankInput;        // this tic's bank keys (-1..1)
 	bool directView;         // renderer previews the mouse every frame
+	double pendingYaw;       // mouse momentum: turn still to be made (degrees)
+	double pendingPitch;
+	bool aimMomentum;
 	bool orientInit;
 
 	// Weapons
@@ -206,6 +209,28 @@ class DDShip : PlayerPawn
 		{
 			player.turnticks--;
 			yawIn += 180. / TURN180_TICKS;
+		}
+
+		// Optional mouse momentum (dd_mousemomentum).  In Descent the mouse
+		// fed the ship's rotational thrust, so turns eased in and out.  Here
+		// the mouse movement is banked and paid out with Descent's
+		// rotational drag (about 0.19s to settle): the total turn is exactly
+		// what you moved, just spread over time.
+		aimMomentum = CVar.GetCVar('dd_mousemomentum', player).GetBool();
+		if (aimMomentum)
+		{
+			// Fraction of the remaining turn left after one tic of drag.
+			double keep = (1 - DD.SHIP_DRAG * 5 / 2) ** (dt / DD.PHYS_STEP);
+			pendingYaw += yawIn;
+			pendingPitch += pitchIn;
+			yawIn = pendingYaw * (1 - keep);
+			pitchIn = pendingPitch * (1 - keep);
+			pendingYaw -= yawIn;
+			pendingPitch -= pitchIn;
+		}
+		else
+		{
+			pendingYaw = pendingPitch = 0;
 		}
 
 		Vector3 rotThrust = (0, 0, bankIn * DD.SHIP_MAX_ROTTHRUST);
@@ -404,7 +429,9 @@ class DDShip : PlayerPawn
 		//  - interpolated: blend the last two tics.  Correct in any
 		//    orientation, one tic behind the mouse.
 		double rollLimit = directView ? 20 : 10;
-		directView = abs(newRoll) < rollLimit && abs(newPitch) < 80 && bankInput == 0
+		// With mouse momentum the ship lags the mouse on purpose, so GZDoom's
+		// raw mouse preview would fight it; always interpolate then.
+		directView = !aimMomentum && abs(newRoll) < rollLimit && abs(newPitch) < 80 && bankInput == 0
 			&& abs(rotVel.x) < 0.02 && abs(rotVel.y) < 0.02 && abs(rotVel.z) < 0.02;
 
 		player.MinPitch = -90;
