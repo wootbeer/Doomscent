@@ -216,12 +216,12 @@ class DDShip : PlayerPawn
 			yawIn += 180. / TURN180_TICKS;
 		}
 
-		// Optional mouse momentum (dd_mousemomentum).  In Descent the mouse
+		// Optional mouse momentum (dd_aimmomentum).  In Descent the mouse
 		// fed the ship's rotational thrust, so turns eased in and out.  Here
 		// the mouse movement is banked and paid out with Descent's
 		// rotational drag (about 0.19s to settle): the total turn is exactly
 		// what you moved, just spread over time.
-		aimMomentum = CVar.GetCVar('dd_mousemomentum', player).GetBool();
+		aimMomentum = CVar.GetCVar('dd_aimmomentum', player).GetBool();
 		if (aimMomentum)
 		{
 			// Fraction of the remaining turn left after one tic of drag.
@@ -286,7 +286,7 @@ class DDShip : PlayerPawn
 		// that is spread over the physics steps as an acceleration, sized
 		// for the ~30fps Descent ran at, so it is the same at any frame rate.
 		// It moves the ship itself, which GZDoom draws smoothly between tics.
-		if (CVar.GetCVar('dd_wiggle', player).GetBool())
+		if (CVar.GetCVar('dd_shipbob', player).GetBool())
 		{
 			double wiggle = DD.SHIP_WIGGLE * 30 * DD.PHYS_STEP * sin(360. * shipTics * DD.TIC);
 			accel += up * (wiggle * DD.SCALE);

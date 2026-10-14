@@ -5,9 +5,11 @@
   launcher does this automatically)
 - All game messages (locked doors, other games' pickups, obituaries...) go
   to Descent's message line at the top of the screen, up to three lines
-- Optional mouse momentum (Options → Doomscent Options → Mouse momentum):
-  mouse turns ease in and out like Descent's rotational physics instead of
-  stopping dead; the total turn is unchanged
+- Mouse momentum (Options → Doomscent Options → Mouse momentum), on by
+  default: mouse turns ease in and out like Descent's rotational physics
+  instead of stopping dead; the total turn is unchanged
+- Mouse momentum and the ship bob are on by default for everyone, including
+  players whose config saved them off
 
 # Doomscent 0.2.1
 
