@@ -385,6 +385,9 @@ class Converter:
         cockpit = gd.cockpits[0] if gd else self.bitmap_index('cockpit')
         if cockpit:
             self.write_graphic('graphics/DDCOCKPT.png', cockpit)
+        rear = gd.cockpits[1] if gd else self.bitmap_index('rearview')
+        if rear:
+            self.write_graphic('graphics/DDREARVW.png', rear)
         status = gd.cockpits[2] if gd else self.bitmap_index('status')
         if status:
             self.write_graphic('graphics/DDSTATUS.png', status)

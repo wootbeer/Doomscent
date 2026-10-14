@@ -6,6 +6,7 @@
 class DDStatusBar : BaseStatusBar
 {
 	TextureID texCockpit;
+	TextureID texRearView;
 	Font gaugeFont;
 
 	override void Init()
@@ -14,6 +15,7 @@ class DDStatusBar : BaseStatusBar
 		// Height 0: never shrink the 3D view for a status bar.
 		SetSize(0, 320, 200);
 		texCockpit = TexMan.CheckForTexture("DDCOCKPT", TexMan.Type_Any);
+		texRearView = TexMan.CheckForTexture("DDREARVW", TexMan.Type_Any);
 		// Descent's own gauge font if the asset pack has it.
 		gaugeFont = Font.GetFont('ddsmall');
 		fontScale = 1.0;
@@ -30,19 +32,45 @@ class DDStatusBar : BaseStatusBar
 	{
 		Super.Draw(state, ticFrac);
 		if (CPlayer == null || CPlayer.mo == null) return;
-		if (automapactive) return;
 		let ship = DDShip(CPlayer.mo);
 		if (ship == null) return;
-		if (CPlayer.playerstate != PST_LIVE) return;
-		if (CPlayer.camera != CPlayer.mo) return;
+
+		// The message line shows on the automap and when dead too.
+		CollectShipMessage(ship);
+		bool showView = !automapactive && CPlayer.playerstate == PST_LIVE && CPlayer.camera == CPlayer.mo;
+		if (!showView)
+		{
+			DrawMessages();
+			return;
+		}
 
 		bool cockpit = CVar.GetCVar('dd_cockpit', CPlayer).GetBool() && texCockpit.IsValid() && state != HUD_None;
+		if (ship.rearView)
+		{
+			// Descent's rear view: its own cockpit art and no gauges or
+			// reticle; without the cockpit just a "REAR VIEW" label.
+			SetupScale();
+			if (cockpit && texRearView.IsValid())
+			{
+				Screen.DrawTexture(texRearView, false, 0, 0,
+					DTA_DestWidth, Screen.GetWidth(), DTA_DestHeight, Screen.GetHeight(),
+					DTA_TopOffset, 0, DTA_LeftOffset, 0);
+			}
+			else
+			{
+				String label = StringTable.Localize("$DD_REARVIEW");
+				Txt(label, 160 - gaugeFont.StringWidth(label) * fontScale / 2, 186, COL_MESSAGE);
+			}
+			DrawMessages();
+			return;
+		}
+
 		if (cockpit)
 			DrawCockpit(ship);
 		else
 			DrawMinimal(ship, state != HUD_None);
 		DrawReticle(ship);
-		DrawHudMessage(ship);
+		DrawMessages();
 
 		// 320x200 virtual screen, like the cockpit.
 		BeginHUD(1, true, 320, 200);
@@ -55,6 +83,101 @@ class DDStatusBar : BaseStatusBar
 			SetupScale();
 			String msg = StringTable.Localize("$DD_FREELOOK");
 			Txt(msg, 160 - gaugeFont.StringWidth(msg) * fontScale * 0.65, 20, COL_ENERGY, 1.3);
+		}
+	}
+
+	//----------------------------------------------------------------------
+	// Descent's HUD message line.  Our own messages (pickups, weapon
+	// selection) and everything GZDoom would print in the top-left corner
+	// (locked doors, other games' pickups, obituaries...) go here: up to
+	// three lines at the top centre, each shown for three seconds.
+
+	const MSG_LINES = 3;
+	const MSG_TICS = 105;
+	Array<String> msgLines;
+	Array<int> msgTimes;
+	int lastShipMsg;
+
+	override bool ProcessNotify(EPrintLevel printlevel, String outline)
+	{
+		if (printlevel & PRINT_NONOTIFY) return false;
+		int level = printlevel & PRINT_TYPES;
+		if (level == PRINT_CHAT || level == PRINT_TEAMCHAT || level == PRINT_LOG) return false;
+		PushMessage(outline);
+		return true;
+	}
+
+	void CollectShipMessage(DDShip ship)
+	{
+		if (ship.msgTime != lastShipMsg && ship.msgText.Length() > 0)
+		{
+			lastShipMsg = ship.msgTime;
+			PushMessage(ship.msgText);
+		}
+	}
+
+	// Text without colour escapes and trailing newlines.
+	static String PlainText(String s)
+	{
+		String res = "";
+		int i = 0;
+		int len = s.Length();
+		while (i < len)
+		{
+			int c;
+			[c, i] = s.GetNextCodePoint(i);
+			if (c == 0x1C)                  // TEXTCOLOR_ESCAPE
+			{
+				if (i < len && s.ByteAt(i) == 0x5B)       // \c[name]
+				{
+					int close = s.IndexOf("]", i);
+					i = close < 0 ? len : close + 1;
+				}
+				else
+				{
+					i++;
+				}
+				continue;
+			}
+			if (c == 0x0A || c == 0x0D) c = 0x20;
+			res.AppendCharacter(c);
+		}
+		res.StripRight();
+		return res;
+	}
+
+	void PushMessage(String text)
+	{
+		text = PlainText(text);
+		// Skip empty lines and the console's echo of typed commands.
+		if (text.Length() == 0 || text.Left(1) == "]") return;
+		let lines = gaugeFont.BreakLines(text, int(300 / fontScale));
+		for (int i = 0; i < lines.Count(); i++)
+		{
+			msgLines.Push(lines.StringAt(i));
+			msgTimes.Push(Level.maptime);
+		}
+		while (msgLines.Size() > MSG_LINES)
+		{
+			msgLines.Delete(0);
+			msgTimes.Delete(0);
+		}
+	}
+
+	void DrawMessages()
+	{
+		// Drop expired lines (and any left over from a previous map, whose
+		// timestamps are ahead of the restarted map clock).
+		while (msgTimes.Size() > 0 && (Level.maptime - msgTimes[0] > MSG_TICS || msgTimes[0] > Level.maptime))
+		{
+			msgLines.Delete(0);
+			msgTimes.Delete(0);
+		}
+		SetupScale();
+		for (int i = 0; i < msgLines.Size(); i++)
+		{
+			double w = gaugeFont.StringWidth(msgLines[i]) * fontScale;
+			Txt(msgLines[i], 160 - w / 2, 4 + i * 7, COL_MESSAGE);
 		}
 	}
 
@@ -260,15 +383,6 @@ class DDStatusBar : BaseStatusBar
 		TxtRight(p, 316, 178, COL_WEAPON, 1.3);
 		TxtRight(String.Format("%s: %d", DD.SecondaryName(ship.secondary), ship.CountInv(DD.SecondaryAmmo(ship.secondary))),
 			316, 186, COL_WEAPON, 1.3);
-	}
-
-	// Descent's HUD message line, centred at the top of the screen.
-	void DrawHudMessage(DDShip ship)
-	{
-		if (ship.msgText.Length() == 0 || ship.shipTics - ship.msgTime > 70) return;
-		SetupScale();
-		double w = gaugeFont.StringWidth(ship.msgText) * fontScale;
-		Txt(ship.msgText, 160 - w / 2, 4, COL_MESSAGE);
 	}
 
 	// show_reticle(): the cross plus primary/secondary readiness markers.

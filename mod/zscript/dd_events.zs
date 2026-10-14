@@ -169,7 +169,11 @@ class DDEventHandler : EventHandler
 			Console.Printf("pos (%.1f %.1f %.1f) vel %.1f u/s", ship.pos.x, ship.pos.y, ship.pos.z, ship.shipVel.Length());
 			Console.Printf("fwd (%.3f %.3f %.3f) up (%.3f %.3f %.3f)", ship.fwd.x, ship.fwd.y, ship.fwd.z, ship.up.x, ship.up.y, ship.up.z);
 			Console.Printf("angle %.1f pitch %.1f roll %.1f", ship.Angle, ship.Pitch, ship.Roll);
-			Console.Printf("map %s energy %d shields %d", Level.MapName, ship.CountInv('DDEnergy'), ship.health);
+			Console.Printf("map %s energy %d shields %d rearview %d", Level.MapName, ship.CountInv('DDEnergy'), ship.health, ship.rearView);
+		}
+		else if (e.Name == 'dd_rear')
+		{
+			ship.RearViewKey(e.Args[0] != 0);
 		}
 		else if (e.Name == 'dd_level')
 		{
