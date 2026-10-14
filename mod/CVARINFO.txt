@@ -10,10 +10,10 @@ user bool dd_levelturn = true;
 
 // Mouse aiming with Descent-style momentum: turns ease in and out instead
 // of stopping dead (the total turn is the same).
-user bool dd_mousemomentum = false;
+user bool dd_aimmomentum = true;
 
 // Descent's gentle up-and-down bob of the ship.
-user bool dd_wiggle = true;
+user bool dd_shipbob = true;
 
 // Slowly roll the ship back level when not banking.
 user bool dd_autolevel = false;
