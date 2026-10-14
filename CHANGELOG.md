@@ -1,4 +1,4 @@
-# Unreleased
+# Doomscent 0.3.0
 
 - Rear view (V): tap to toggle, hold to look back only while held, with
   Descent's rear-view cockpit art (re-run the converter to get it; the
