@@ -26,3 +26,7 @@ __pycache__/
 *.pyc
 .DS_Store
 Thumbs.db
+
+# Everything players put in data/ (game files, an Ick Mode face...).
+data/*
+!data/README.txt

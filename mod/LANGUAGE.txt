@@ -40,6 +40,7 @@ DD_GOTMEGA = "Mega missile!";
 DD_GOTBACKPACK = "Supply pack!";
 DD_GOTINVUL = "Invulnerability!";
 DD_GOTCLOAK = "Cloaking device!";
+DD_ICKON = "This vibe is making me sick.";
 DD_FREELOOK = "Turn on mouselook (Options > Doomscent > Bind Descent-style keys)";
 DD_ENERGYTO = "Energy boosted to %d";
 DD_SHIELDTO = "Shield boosted to %d";

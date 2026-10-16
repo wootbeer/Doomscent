@@ -18,7 +18,9 @@ if [ -d "$ROOT/mod" ]; then
 	fi
 fi
 
-if [ ! -f "$ROOT/dd_descent_assets.pk3" ] || [ "$ROOT/tools/ddconvert.py" -nt "$ROOT/dd_descent_assets.pk3" ]; then
+# (Ick Mode's optional data/ickface.png also triggers a reconvert.)
+if [ ! -f "$ROOT/dd_descent_assets.pk3" ] || [ "$ROOT/tools/ddconvert.py" -nt "$ROOT/dd_descent_assets.pk3" ] ||
+	[ "$ROOT/data/ickface.png" -nt "$ROOT/dd_descent_assets.pk3" ]; then
 	if [ ! -f "$ROOT/data/DESCENT.PIG" ] && [ ! -f "$ROOT/data/descent.pig" ]; then
 		echo "Copy DESCENT.HOG and DESCENT.PIG from Descent 1 into $ROOT/data/." >&2
 		exit 1

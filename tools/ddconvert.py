@@ -18,6 +18,7 @@ File formats follow the Descent 1 source release (PIGGY.C, BM.C, INTERP.ASM),
 
 import argparse
 import io
+import math
 import os
 import struct
 import sys
@@ -108,6 +109,7 @@ VCLIP_SPRITES = {
     'DX32': 32, 'DX53': 53, 'DX54': 54, 'DX55': 55, 'DX56': 56,
     'DX58': 58, 'DX59': 59, 'DX60': 60, 'DX63': 63, 'DX64': 64,
     'DX65': 65,
+    'DX61': 61,     # player appearance (Ick Mode's warp-out)
     # powerups
     'DP18': 18, 'DP19': 19, 'DP20': 20, 'DP24': 24, 'DP25': 25,
     'DP26': 26, 'DP34': 34, 'DP35': 35, 'DP36': 36, 'DP37': 37,
@@ -257,11 +259,13 @@ class GameData:
         o += MAX_SOUNDS * 2                             # Sounds, AltSounds
         i32()                                           # Num_vclips
         self.vclips = []
+        self.vclip_sounds = []
         for i in range(VCLIP_MAXNUM):
             play_time, nframes, frame_time, flags, snd = struct.unpack_from('<iiiih', d, o)
             frames = struct.unpack_from('<30H', d, o + 18)
             light = struct.unpack_from('<i', d, o + 78)[0]
             self.vclips.append((max(nframes, 0), fix(frame_time), frames[:max(nframes, 0)], fix(light)))
+            self.vclip_sounds.append(snd)
             o += SIZE_VCLIP
         i32()
         o += MAX_EFFECTS * SIZE_ECLIP
@@ -328,6 +332,178 @@ def png(width, height, rgba, offsets=None):
         out += chunk(b'grAb', struct.pack('>ii', offsets[0], offsets[1]))
     out += chunk(b'IDAT', zlib.compress(bytes(raw), 9))
     out += chunk(b'IEND', b'')
+    return out
+
+
+def read_png(data):
+    """Minimal PNG reader (8-bit, non-interlaced) -> (width, height, RGBA)."""
+    if data[:8] != b'\x89PNG\r\n\x1a\n':
+        raise ValueError('not a PNG file')
+    o = 8
+    idat = b''
+    plte = trns = None
+    while o < len(data):
+        n, tag = struct.unpack_from('>I4s', data, o)
+        body = data[o + 8:o + 8 + n]
+        o += 12 + n
+        if tag == b'IHDR':
+            w, h, depth, ctype, _, _, interlace = struct.unpack('>IIBBBBB', body)
+        elif tag == b'PLTE':
+            plte = body
+        elif tag == b'tRNS':
+            trns = body
+        elif tag == b'IDAT':
+            idat += body
+        elif tag == b'IEND':
+            break
+    if depth != 8 or interlace:
+        raise ValueError('only 8-bit, non-interlaced PNGs are supported')
+    bpp = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}[ctype]
+    raw = zlib.decompress(idat)
+    stride = w * bpp
+    prev = bytearray(stride)
+    rgba = bytearray(w * h * 4)
+    p = 0
+    for y in range(h):
+        ft = raw[p]
+        line = bytearray(raw[p + 1:p + 1 + stride])
+        p += 1 + stride
+        for i in range(stride):
+            a = line[i - bpp] if i >= bpp else 0
+            b = prev[i]
+            if ft == 1:
+                line[i] = (line[i] + a) & 255
+            elif ft == 2:
+                line[i] = (line[i] + b) & 255
+            elif ft == 3:
+                line[i] = (line[i] + ((a + b) >> 1)) & 255
+            elif ft == 4:
+                c = prev[i - bpp] if i >= bpp else 0
+                pa, pb, pc = abs(b - c), abs(a - c), abs(a + b - 2 * c)
+                line[i] = (line[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+        prev = line
+        for x in range(w):
+            q = (y * w + x) * 4
+            v = line[x * bpp:x * bpp + bpp]
+            if ctype == 6:
+                rgba[q:q + 4] = v
+            elif ctype == 2:
+                rgba[q:q + 4] = bytes(v) + b'\xff'
+            elif ctype == 0:
+                rgba[q:q + 4] = bytes((v[0], v[0], v[0], 255))
+            elif ctype == 4:
+                rgba[q:q + 4] = bytes((v[0], v[0], v[0], v[1]))
+            else:
+                k = v[0]
+                al = trns[k] if trns and k < len(trns) else 255
+                rgba[q:q + 4] = plte[k * 3:k * 3 + 3] + bytes((al,))
+    return w, h, rgba
+
+
+def fit_image(w, h, rgba, target_h):
+    """Crop to the opaque area and box-filter down to target_h pixels tall."""
+    xs = [x for x in range(w) if any(rgba[(y * w + x) * 4 + 3] > 16 for y in range(0, h, max(1, h // 128)))]
+    ys = [y for y in range(h) if any(rgba[(y * w + x) * 4 + 3] > 16 for x in range(0, w, max(1, w // 128)))]
+    if not xs or not ys:
+        raise ValueError('the image is fully transparent')
+    x0, x1, y0, y1 = xs[0], xs[-1] + 1, ys[0], ys[-1] + 1
+    k = (y1 - y0) / float(target_h)
+    nw = max(1, int(round((x1 - x0) / k)))
+    out = bytearray(nw * target_h * 4)
+    for ty in range(target_h):
+        sy0, sy1 = y0 + int(ty * k), max(y0 + int(ty * k) + 1, y0 + int((ty + 1) * k))
+        for tx in range(nw):
+            sx0, sx1 = x0 + int(tx * k), max(x0 + int(tx * k) + 1, x0 + int((tx + 1) * k))
+            r = g = b = a = n = 0
+            for sy in range(sy0, min(sy1, h)):
+                for sx in range(sx0, min(sx1, w)):
+                    q = (sy * w + sx) * 4
+                    al = rgba[q + 3]
+                    r += rgba[q] * al
+                    g += rgba[q + 1] * al
+                    b += rgba[q + 2] * al
+                    a += al
+                    n += 1
+            q = (ty * nw + tx) * 4
+            if a and a >= n * 64:   # mostly opaque: keep, with hard edges
+                out[q:q + 4] = bytes((r // a, g // a, b // a, 255))
+    return nw, target_h, out
+
+
+def default_face(size=64):
+    """A simple cartoon face for Ick Mode when data/ickface.png is absent."""
+    out = bytearray(size * size * 4)
+    c = size / 2.0
+
+    def put(x, y, col):
+        q = (y * size + x) * 4
+        out[q:q + 4] = bytes(col) + b'\xff'
+
+    for y in range(size):
+        for x in range(size):
+            u, v = (x + 0.5 - c) / (c * 0.86), (y + 0.5 - c * 1.04) / (c * 0.96)
+            if u * u + v * v > 1:
+                continue
+            shade = 1.0 - 0.25 * max(0.0, u)
+            put(x, y, [int(ch * shade) for ch in (120, 200, 90)])
+            if v < -0.35:                                   # beanie
+                put(x, y, [int(ch * shade) for ch in (60, 40, 90)])
+            for ex in (-0.38, 0.38):                        # eyes
+                du, dv = u - ex, v + 0.05
+                if du * du + dv * dv < 0.045:
+                    put(x, y, (240, 240, 240))
+                if (du - 0.04) ** 2 + (dv - 0.03) ** 2 < 0.012:
+                    put(x, y, (20, 20, 20))
+            du, dv = u / 0.28, (v - 0.5) / 0.2              # open mouth
+            if du * du + dv * dv < 1:
+                put(x, y, (90, 20, 30))
+    return size, size, out
+
+
+def face_rotations(w, h, rgba):
+    """Fake the eight sprite rotations from one front view by wrapping each
+    row of the face round a cylinder; the back of the head takes the colour
+    of the row's edges.  Returns {angle: rgba} for 0, 45, 90, 135, 180."""
+    rows = []
+    for y in range(h):
+        xs = [x for x in range(w) if rgba[(y * w + x) * 4 + 3] > 128]
+        if not xs:
+            rows.append(None)
+            continue
+        l, r = xs[0], xs[-1]
+        edge = [x for x in xs if x <= l + 2 or x >= r - 2]
+        back = [sum(rgba[(y * w + x) * 4 + i] for x in edge) // len(edge) for i in range(3)]
+        rows.append((l, r, back))
+    # Smooth the back colours vertically so single rows don't streak.
+    backs = [row[2] if row else None for row in rows]
+    for y, row in enumerate(rows):
+        if row:
+            near = [b for b in backs[max(0, y - 5):y + 6] if b]
+            rows[y] = (row[0], row[1], [sum(b[i] for b in near) // len(near) for i in range(3)])
+    out = {}
+    for ang in (0, 45, 90, 135, 180):
+        t = math.radians(ang)
+        img = bytearray(w * h * 4)
+        for y, row in enumerate(rows):
+            if row is None:
+                continue
+            l, r, back = row
+            c, rad = (l + r + 1) / 2.0, (r - l + 1) / 2.0
+            for x in range(l, r + 1):
+                u = max(-1.0, min(1.0, (x + 0.5 - c) / rad))
+                phi = math.asin(u) - t
+                q = (y * w + x) * 4
+                if math.cos(phi) >= 0:
+                    sx = min(r, max(l, int(c + math.sin(phi) * rad)))
+                    sq = (y * w + sx) * 4
+                    if rgba[sq + 3] <= 128:
+                        continue
+                    shade = 0.7 + 0.3 * math.cos(phi)
+                    img[q:q + 4] = bytes(int(rgba[sq + i] * shade) for i in range(3)) + b'\xff'
+                else:
+                    shade = 0.7 + 0.15 * -math.cos(phi)
+                    img[q:q + 4] = bytes(int(v * shade) for v in back) + b'\xff'
+        out[ang] = img
     return out
 
 
@@ -434,6 +610,12 @@ class Converter:
             for num, idx in enumerate(self.gd.sound_map):
                 if idx != 255 and idx < len(self.pig.sounds):
                     self.sndinfo.append('$alias ddsnd/%d dd/%s' % (num, self.pig.sounds[idx].name))
+            # Vclip sounds (ddvclip/N), e.g. the warp-in effect's.
+            for vc, snd in enumerate(self.gd.vclip_sounds):
+                if 0 <= snd < len(self.gd.sound_map):
+                    idx = self.gd.sound_map[snd]
+                    if idx != 255 and idx < len(self.pig.sounds):
+                        self.sndinfo.append('$alias ddvclip/%d dd/%s' % (vc, self.pig.sounds[idx].name))
         # The ship's "player sounds": no Doomguy grunts.  Death is an
         # explosion, everything else is silent (the mod plays Descent's
         # hit sound itself).
@@ -659,6 +841,27 @@ class Converter:
             lines.append('}')
             self.modeldef.append('\n'.join(lines))
 
+    def convert_ickface(self, path):
+        """Ick Mode's monster face: data/ickface.png if there is one, else a
+        built-in cartoon face, as sprite ICKF with all eight rotations."""
+        face = None
+        used = 'built-in'
+        if path:
+            try:
+                with open(path, 'rb') as f:
+                    face = fit_image(*read_png(f.read()), target_h=64)
+                used = os.path.basename(path)
+            except (OSError, ValueError, KeyError, zlib.error) as e:
+                print('warning: %s: %s; using the built-in face' % (path, e))
+        if face is None:
+            face = default_face()
+        w, h, rgba = face
+        rots = face_rotations(w, h, rgba)
+        names = {0: 'ICKFA1', 45: 'ICKFA2A8', 90: 'ICKFA3A7', 135: 'ICKFA4A6', 180: 'ICKFA5'}
+        for ang, name in names.items():
+            self.zip.writestr('sprites/%s.png' % name, png(w, h, rots[ang], (w // 2, h - 1)))
+        self.report.append('Ick Mode face (%s)' % used)
+
     def finish(self):
         self.zip.writestr('sndinfo.ddassets', '\n'.join(self.sndinfo) + '\n')
         if self.modeldef:
@@ -699,6 +902,7 @@ def main(argv=None):
         c.convert_hud()
         c.convert_sprites()
         c.convert_sounds()
+        c.convert_ickface(find_file(os.path.dirname(os.path.abspath(pig)), 'ickface.png'))
         c.convert_fonts()
         c.convert_models()
         c.write_modeldef()

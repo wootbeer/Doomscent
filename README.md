@@ -116,8 +116,9 @@ Mouselook must be on (the bind option turns it on).
 
 The **Doomscent Options** menu also has:
 
-- thrust and weapon damage multipliers (mouse speed is GZDoom's own mouse
-  sensitivity setting);
+- thrust, weapon damage and damage taken multipliers (at 1.0, thrust and
+  weapon damage are Descent's and damage taken is Doom's; mouse speed is
+  GZDoom's own mouse sensitivity setting);
 - level (Doom-style) turning or Descent-style ship-axis turning;
 - mouse momentum (on by default): turns ease in and out like Descent's
   instead of stopping dead;
@@ -125,7 +126,20 @@ The **Doomscent Options** menu also has:
 - banking into turns (off by default);
 - auto-levelling;
 - bump-to-open doors;
-- the cockpit on or off.
+- the cockpit on or off;
+- Ick Mode (below).
+
+### Ick Mode
+
+Turn on **Ick Mode** in the Doomscent Options and every monster wears the
+same face, scaled to the monster (big face for a Cyberdemon, wide face for
+the Spider Mastermind). The faces turn to show their sides and the back of
+the head as monsters walk around. Monsters bleed green, and when they die
+they warp out like a Descent ship instead of leaving a corpse.
+
+To use your own face, put a PNG named `ickface.png` (a head on a transparent
+background works best) in the `data` folder. The launcher picks it up on the
+next start. Without one, Ick Mode uses a built-in cartoon face.
 
 ## How Doom's items map to Descent
 

@@ -1026,6 +1026,9 @@ class DDShip : PlayerPawn
 
 	override int DamageMobj(Actor inflictor, Actor source, int damage, Name mod, int flags, double angle)
 	{
+		// Damage-taken multiplier (telefrags and the like stay lethal).
+		if (damage > 0 && damage < TELEFRAG_DAMAGE && dd_damagetaken != 1)
+			damage = max(1, int(round(damage * max(dd_damagetaken, 0.1))));
 		int dmg = Super.DamageMobj(inflictor, source, damage, mod, flags, angle);
 		if (dmg > 0 && health > 0)
 		{

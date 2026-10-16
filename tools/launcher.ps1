@@ -69,7 +69,14 @@ $Assets = Join-Path $Root 'dd_descent_assets.pk3'
 $ConvExe = Join-Path $Root 'tools\ddconvert.exe'
 $ConvPy = Join-Path $Root 'tools\ddconvert.py'
 $converter = if (Test-Path $ConvExe) { Get-Item $ConvExe } else { Get-Item $ConvPy }
-if (-not (Test-Path $Assets) -or $converter.LastWriteTime -gt (Get-Item $Assets).LastWriteTime) {
+# Ick Mode's face (optional): reconvert when it is added or changed.
+$IckFace = Join-Path $Data 'ickface.png'
+$stale = -not (Test-Path $Assets)
+if (-not $stale) {
+    $built = (Get-Item $Assets).LastWriteTime
+    $stale = $converter.LastWriteTime -gt $built -or ((Test-Path $IckFace) -and (Get-Item $IckFace).LastWriteTime -gt $built)
+}
+if ($stale) {
     if (-not (Test-Path (Join-Path $Data 'DESCENT.PIG')) -or -not (Test-Path (Join-Path $Data 'DESCENT.HOG'))) {
         Fail "Copy DESCENT.HOG and DESCENT.PIG from your copy of Descent 1 into $Data\ and run this again."
     }

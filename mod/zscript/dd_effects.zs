@@ -34,6 +34,7 @@ class DDVclip abstract
 			case 58: return 17, 0.052;
 			case 59: return 5, 0.1;
 			case 60: return 11, 0.079;
+			case 61: return 12, 0.067;
 			case 63: return 13, 0.038;
 			case 64: return 5, 0.1;
 			case 65: return 10, 0.04;
@@ -157,6 +158,7 @@ class DDSpriteNames : Actor abstract
 		DX58 A 0;
 		DX59 A 0;
 		DX60 A 0;
+		DX61 A 0;
 		DX63 A 0;
 		DX64 A 0;
 		DX65 A 0;

@@ -181,8 +181,50 @@ class DDEventHandler : EventHandler
 		}
 	}
 
+	// Ick Mode: give monsters their faces, and say so when it's turned on.
+	bool ickStarted, ickWas;
+
+	override void WorldThingSpawned(WorldEvent e)
+	{
+		if (dd_ickmode && DDIckFace.Wanted(e.thing))
+			DDIckFace.Attach(e.thing);
+	}
+
+	override void WorldThingRevived(WorldEvent e)
+	{
+		if (dd_ickmode && DDIckFace.Wanted(e.thing))
+			DDIckFace.Attach(e.thing);
+	}
+
+	void CheckIckMode()
+	{
+		bool on = dd_ickmode;
+		if (!ickStarted)
+		{
+			ickStarted = true;
+			ickWas = on;
+			return;
+		}
+		if (on == ickWas) return;
+		ickWas = on;
+		if (!on) return;
+		let it = ThinkerIterator.Create('Actor', Thinker.STAT_DEFAULT);
+		Actor mo;
+		while (mo = Actor(it.Next()))
+		{
+			if (DDIckFace.Wanted(mo) && mo.FindInventory('DDIckToken') == null)
+				DDIckFace.Attach(mo);
+		}
+		for (int i = 0; i < MAXPLAYERS; i++)
+		{
+			let ship = playeringame[i] ? DDShip(players[i].mo) : null;
+			if (ship) ship.ShowMessage(StringTable.Localize("$DD_ICKON"));
+		}
+	}
+
 	override void WorldTick()
 	{
+		CheckIckMode();
 		// Light the homing warning when a homing missile is chasing a ship.
 		if (Level.maptime % 4) return;
 		let it = ThinkerIterator.Create('Actor', Thinker.STAT_DEFAULT);
