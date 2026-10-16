@@ -10,6 +10,9 @@ addmenukey "Fire flare" +user3
 addmenukey "Drop bomb" +user4
 addmenukey "Rear view" +dd_rearview
 addmenukey "Cycle secondary" dd_nextsecondary
+addmenukey "Afterburner (Descent II)" +dd_afterburner
+addmenukey "Headlight (Descent II)" dd_headlight
+addmenukey "Energy to shield (Descent II)" +dd_convert
 addmenukey "Level ship" dd_levelship
 
 alias dd_nextsecondary "netevent dd_nextsecondary"
@@ -17,9 +20,14 @@ alias dd_levelship "netevent dd_level"
 alias dd_info "netevent dd_info"
 alias +dd_rearview "netevent dd_rear 1"
 alias -dd_rearview "netevent dd_rear 0"
+alias +dd_afterburner "netevent dd_afterburner 1"
+alias -dd_afterburner "netevent dd_afterburner 0"
+alias dd_headlight "netevent dd_headlight"
+alias +dd_convert "netevent dd_convert 1"
+alias -dd_convert "netevent dd_convert 0"
 
 // Bind the Descent-style layout (from the options menu).
-alias dd_bindkeys "bind w +forward; bind s +back; bind a +moveleft; bind d +moveright; bind q +user1; bind e +user2; bind space +moveup; bind c +movedown; bind lctrl +movedown; bind r +use; bind f +user3; bind b +user4; bind mouse1 +attack; bind mouse2 +altattack; bind mwheelup weapprev; bind mwheeldown weapnext; bind mouse3 dd_nextsecondary; bind z dd_levelship; bind v +dd_rearview; bind 1 \"slot 1\"; bind 2 \"slot 2\"; bind 3 \"slot 3\"; bind 4 \"slot 4\"; bind 5 \"slot 5\"; bind 6 \"slot 6\"; bind 7 \"slot 7\"; bind 8 \"slot 8\"; bind 9 \"slot 9\"; bind 0 \"slot 0\"; freelook true; lookspring false; echo Doomscent controls bound."
+alias dd_bindkeys "bind w +forward; bind s +back; bind a +moveleft; bind d +moveright; bind q +user1; bind e +user2; bind space +moveup; bind c +movedown; bind lctrl +movedown; bind r +use; bind f +user3; bind b +user4; bind mouse1 +attack; bind mouse2 +altattack; bind mwheelup weapprev; bind mwheeldown weapnext; bind mouse3 dd_nextsecondary; bind z dd_levelship; bind v +dd_rearview; bind lshift +dd_afterburner; bind h dd_headlight; bind g +dd_convert; bind 1 \"slot 1\"; bind 2 \"slot 2\"; bind 3 \"slot 3\"; bind 4 \"slot 4\"; bind 5 \"slot 5\"; bind 6 \"slot 6\"; bind 7 \"slot 7\"; bind 8 \"slot 8\"; bind 9 \"slot 9\"; bind 0 \"slot 0\"; freelook true; lookspring false; echo Doomscent controls bound."
 
 // Keys that are normally free in GZDoom's default layout.
 defaultbind q +user1
@@ -28,4 +36,7 @@ defaultbind f +user3
 defaultbind b +user4
 defaultbind z dd_levelship
 defaultbind v +dd_rearview
+defaultbind x +dd_afterburner
+defaultbind h dd_headlight
+defaultbind g +dd_convert
 defaultbind mouse3 dd_nextsecondary

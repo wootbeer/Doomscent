@@ -18,6 +18,9 @@ user bool dd_shipbob = true;
 // Slowly roll the ship back level when not banking.
 user bool dd_autolevel = false;
 
+// Play Descent's music instead of the game's own.
+user bool dd_music = false;
+
 // Draw the Descent cockpit (off = full-screen HUD with reticle only).
 user bool dd_cockpit = true;
 

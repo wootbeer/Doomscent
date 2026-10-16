@@ -26,6 +26,11 @@ becomes Descent's ship:
 - **Descent powerups.** Doom's pickups are replaced by Descent's spinning
   powerups: health becomes shields, armour and cells become energy, and Doom
   weapons become Descent weapons.
+- **Descent II mode** (optional): Descent II's cockpit, sounds and music,
+  its extra weapons (super laser, gauss, helix, phoenix, omega; flash,
+  guided, smart mine, mercury and earthshaker missiles) and its equipment
+  (afterburner, headlight, energy converter, ammo rack). See below.
+- **Descent's music** as an option, instead of the game's own.
 - **Doors and switches** work when you fly into them, and switches can also
   be shot, as in Descent (a near miss counts). Exit switches only respond to
   shots from close by (about 200 units), so a stray shot can't end the level.
@@ -45,6 +50,12 @@ becomes Descent's ship:
      tested; shareware should work but is untested).
 3. Double-click `Doomscent.bat`.
 
+For **Descent II mode**, also copy `DESCENT2.HOG`, `DESCENT2.HAM`,
+`GROUPA.PIG` and `DESCENT2.S22` from Descent II into `data` and start
+`Doomscent2.bat` instead (or `Doomscent.bat -descent2`). Descent 1 stays
+the default; with only Descent II's files in `data`, `Doomscent.bat` uses
+Descent II mode.
+
 On the first run the launcher:
 
 - offers to download [GZDoom](https://zdoom.org/downloads) 4.14.2 into a
@@ -58,7 +69,7 @@ which game to play. Extra arguments go to GZDoom, e.g.
 `Doomscent.bat -iwad DOOM2.WAD +map MAP01`.
 
 **No game data is included**, and the generated `dd_descent_assets.pk3`
-contains Descent's data, so don't share it. The retail Descent is sold on
+(and `dd_descent2_assets.pk3`) contain Descent's data, so don't share them. The retail Descent is sold on
 GOG and Steam.
 
 Windows SmartScreen or antivirus may be wary of `tools\ddconvert.exe`,
@@ -72,7 +83,7 @@ renderer can't roll the view.
 ## Linux / macOS
 
 Install GZDoom 4.14+ and Python 3, put your files in `data/` as above, and
-run `./doomscent.sh`.
+run `./doomscent.sh` (`./doomscent.sh --descent2` for Descent II mode).
 
 ## Running from source
 
@@ -84,6 +95,10 @@ Clone the repository, put your files in `data/`, and run `Doomscent.bat` (or
 python tools/build_pk3.py doomscent.pk3
 python tools/ddconvert.py data -o dd_descent_assets.pk3
 gzdoom -iwad DOOM2.WAD -file dd_descent_assets.pk3 doomscent.pk3
+
+# Descent II mode
+python tools/ddconvert.py --descent2 data -o dd_descent2_assets.pk3
+gzdoom -iwad DOOM2.WAD -file dd_descent2_assets.pk3 doomscent.pk3
 ```
 
 To make a release, set `VERSION` and add a `CHANGELOG.md` entry, then either
@@ -103,14 +118,17 @@ Bind Descent-style keys** sets up the full layout:
 | Pitch and turn | Mouse (arrow keys also turn and pitch) |
 | Bank left / right | Q / E |
 | Fire primary / secondary | Left / right mouse button |
-| Select primary weapon | 1-5 (laser, vulcan, spreadfire, plasma, fusion) |
-| Select secondary weapon | 6-0 (concussion, homing, proximity, smart, mega) |
+| Select primary weapon | 1-5 (laser, vulcan, spreadfire, plasma, fusion; press again for Descent II's super laser, gauss, helix, phoenix, omega) |
+| Select secondary weapon | 6-0 (concussion, homing, proximity, smart, mega; press again for Descent II's flash, guided, smart mine, mercury, earthshaker) |
 | Cycle secondary | Middle mouse button |
 | Fire flare | F |
 | Drop proximity bomb | B |
 | Rear view (tap to toggle, hold to peek) | V |
 | Level the ship | Z |
 | Use (or fly into doors/switches, or shoot switches) | R |
+| Afterburner (Descent II) | Left Shift (X if you haven't bound the keys) |
+| Headlight on/off (Descent II) | H |
+| Energy to shield converter (Descent II) | G (hold) |
 
 Mouselook must be on (the bind option turns it on).
 
@@ -127,6 +145,8 @@ The **Doomscent Options** menu also has:
 - auto-levelling;
 - bump-to-open doors;
 - the cockpit on or off;
+- Descent's music instead of the game's (each level plays one of Descent's
+  songs in turn, as Descent did);
 - Ick Mode (below).
 
 ### Ick Mode
@@ -165,6 +185,36 @@ next start. Without one, Ick Mode uses a built-in cartoon face.
 
 Custom PWADs (`-file mymap.wad`) work as long as they use the base game's
 items and monsters.
+
+## Descent II mode
+
+Descent II mode keeps everything above and adds what Descent II brought.
+The cockpit, gauges and weapon pictures are Descent II's high-resolution
+ones, and its sounds and music are used.
+
+- **Weapons.** Each number key holds a Descent 1 weapon and its Descent II
+  successor; press the key again to switch. About half of Doom's weapon and
+  missile pickups turn into the Descent II versions:
+
+  | Doom | Descent 1 or Descent II |
+  |---|---|
+  | Shotgun | Spreadfire or helix cannon |
+  | Super shotgun | Quad lasers or super laser |
+  | Chaingun | Vulcan or gauss cannon |
+  | Plasma rifle | Plasma or phoenix cannon |
+  | BFG 9000 | Fusion or omega cannon |
+  | Rocket launcher | Smart missile or 4 mercury missiles |
+  | Shells / box of shells | Concussion or flash missiles |
+  | Rocket / box of rockets | Homing or guided missiles |
+  | Berserk | Super laser (and 100 shields) |
+  | Megasphere | Shields, energy and an earthshaker missile |
+
+  The guided missile is flown from its own view with the mouse; the omega
+  cannon locks onto whatever is in front of it and recharges from energy.
+- **Equipment.** The radiation suit becomes the afterburner, light
+  amplification goggles the headlight, the computer map the full map, and
+  the backpack also works as Descent II's ammo rack (double missile
+  capacity) and fits the energy-to-shield converter.
 
 ## More than Doom
 

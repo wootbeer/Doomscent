@@ -19,6 +19,6 @@ jobs:
           python tools/make_release.py -o dist
       - name: No game data in the repository
         run: |
-          if git ls-files | grep -iE '\.(wad|hog|pig|ham)$'; then
+          if git ls-files | grep -iE '\.(wad|hog|pig|ham|s11|s22)$'; then
             echo "Game data must not be committed."; exit 1
           fi

@@ -45,6 +45,19 @@ class DDShip : PlayerPawn
 
 	int homingWarning;           // tics left on the homing warning light
 
+	// Descent II equipment and weapons.
+	bool hasAfterburner, hasHeadlight, hasConverter;
+	double afterburnerCharge;    // 0..1
+	bool afterburnerHeld, afterburnerOn;
+	bool headlightOn;
+	bool converting;
+	double nextConvertSound;
+	double omegaCharge;          // 0..1
+	double lastOmegaTime;
+	double nextOmegaSound;
+	int helixOrient;
+	DDGuidedMissile guided;
+
 	String msgText;
 	int msgTime;
 
@@ -74,11 +87,11 @@ class DDShip : PlayerPawn
 		Player.StartItem "DDLaserCannon";
 		Player.StartItem "DDEnergy", DD.START_ENERGY;
 		Player.StartItem "DDConcussionAmmo", 3;
-		Player.WeaponSlot 1, "DDLaserCannon";
-		Player.WeaponSlot 2, "DDVulcanCannon";
-		Player.WeaponSlot 3, "DDSpreadfireCannon";
-		Player.WeaponSlot 4, "DDPlasmaCannon";
-		Player.WeaponSlot 5, "DDFusionCannon";
+		Player.WeaponSlot 1, "DDLaserCannon", "DDSuperLaserCannon";
+		Player.WeaponSlot 2, "DDVulcanCannon", "DDGaussCannon";
+		Player.WeaponSlot 3, "DDSpreadfireCannon", "DDHelixCannon";
+		Player.WeaponSlot 4, "DDPlasmaCannon", "DDPhoenixCannon";
+		Player.WeaponSlot 5, "DDFusionCannon", "DDOmegaCannon";
 		Health 100;
 		Radius 16;
 		Height 32;
@@ -238,6 +251,15 @@ class DDShip : PlayerPawn
 			pendingYaw = pendingPitch = 0;
 		}
 
+		// Flying a guided missile: the turn controls steer it (at half
+		// rate, as in Descent II) and the ship coasts.
+		bool steering = guided != null && guided.guided && guided.health > 0 && !guided.InStateSequence(guided.CurState, guided.ResolveState('Death'));
+		if (steering)
+		{
+			guided.Steer(pitchIn / 2, -yawIn / 2, bankIn * 90 * dt);
+			yawIn = pitchIn = bankIn = 0;
+		}
+
 		Vector3 rotThrust = (0, 0, bankIn * DD.SHIP_MAX_ROTTHRUST);
 		rotVel = SimulateDrag(rotVel, rotThrust / DD.SHIP_MASS, DD.SHIP_DRAG * 5 / 2, dt);
 
@@ -276,6 +298,8 @@ class DDShip : PlayerPawn
 		double um = clamp(cmd.upmove / 256., -1, 1);
 		if (buttons & BT_JUMP) um = 1;
 		if (buttons & BT_CROUCH) um = -1;
+		if (steering) fm = sm = um = 0;
+		fm = Afterburner(fm, dt);
 		thrustDir = fwd * fm + rgt * sm + up * um;
 
 		double thrustScale = CVar.GetCVar('dd_thrust', player).GetFloat();
@@ -515,6 +539,7 @@ class DDShip : PlayerPawn
 			BumpActivate();
 
 		HandleFiring();
+		D2Tick();
 		if (homingWarning > 0) homingWarning--;
 	}
 
@@ -600,7 +625,8 @@ class DDShip : PlayerPawn
 
 	clearscope int CurrentPrimary()
 	{
-		let w = player.ReadyWeapon;
+		let w = DDPrimaryWeapon(player.ReadyWeapon);
+		if (w) return w.primaryIndex;
 		if (w is 'DDVulcanCannon') return DD.PW_VULCAN;
 		if (w is 'DDSpreadfireCannon') return DD.PW_SPREADFIRE;
 		if (w is 'DDPlasmaCannon') return DD.PW_PLASMA;
@@ -616,13 +642,19 @@ class DDShip : PlayerPawn
 			case DD.PW_SPREADFIRE: return 12;
 			case DD.PW_PLASMA: return 13;
 			case DD.PW_FUSION: return 14;
+			// Descent II: the laser stops at level 4; the super laser is 5-6.
+			case DD.PW_SUPERLASER: return laserLevel >= 5 ? 31 : 30;
+			case DD.PW_GAUSS: return 32;
+			case DD.PW_HELIX: return 33;
+			case DD.PW_PHOENIX: return 34;
+			case DD.PW_OMEGA: return 35;
 		}
-		return laserLevel;
+		return min(laserLevel, 3);
 	}
 
 	static int SecondaryWeaponId(int sec)
 	{
-		static const int ids[] = { 8, 15, 16, 17, 18 };
+		static const int ids[] = { 8, 15, 16, 17, 18, 36, 37, 38, 39, 40 };
 		return ids[sec];
 	}
 
@@ -643,7 +675,8 @@ class DDShip : PlayerPawn
 
 	clearscope bool HasPrimaryAmmo(int primary)
 	{
-		if (primary == DD.PW_VULCAN) return CountInv('DDVulcanAmmo') > 0;
+		if (primary == DD.PW_VULCAN || primary == DD.PW_GAUSS) return CountInv('DDVulcanAmmo') > 0;
+		if (primary == DD.PW_OMEGA) return omegaCharge > 0 || Energy() > 0;
 		DDWeaponStats s;
 		DDWeaponTable.Get(PrimaryWeaponId(primary, laserLevel), s);
 		return Energy() >= max(s.energy, 0.01) || (primary == DD.PW_FUSION && Energy() > 0);
@@ -672,6 +705,8 @@ class DDShip : PlayerPawn
 		int primary = CurrentPrimary();
 		if (primary == DD.PW_FUSION)
 			HandleFusion(buttons & BT_ATTACK, now);
+		else if (primary == DD.PW_OMEGA)
+			HandleOmega(buttons & BT_ATTACK, now);
 		else if (buttons & BT_ATTACK)
 			FirePrimaryHeld(primary, now);
 
@@ -692,9 +727,12 @@ class DDShip : PlayerPawn
 
 		if ((buttons & BT_USER4) && !(player.oldbuttons & BT_USER4))
 		{
-			// Descent's "drop bomb" key.
+			// Descent's "drop bomb" key: proximity bombs, or Descent II's
+			// smart mines when those are selected or the only ones left.
 			int saved = secondary;
-			secondary = DD.SW_PROXIMITY;
+			bool mine = CountInv('DDSmartMineAmmo') > 0
+				&& (secondary == DD.SW_SMARTMINE || CountInv('DDProximityAmmo') == 0);
+			secondary = mine ? DD.SW_SMARTMINE : DD.SW_PROXIMITY;
 			FireSecondary(now);
 			secondary = saved;
 		}
@@ -714,10 +752,11 @@ class DDShip : PlayerPawn
 		int guard = 0;
 		while (nextPrimaryTime <= now && guard++ < 4)
 		{
-			if (primary == DD.PW_VULCAN)
+			if (primary == DD.PW_VULCAN || primary == DD.PW_GAUSS)
 			{
 				if (CountInv('DDVulcanAmmo') <= 0) { AutoSelectPrimary(); break; }
-				TakeInventory('DDVulcanAmmo', 1);
+				// Gauss uses vulcan ammo twice as fast (ammo_usage 2).
+				TakeInventory('DDVulcanAmmo', primary == DD.PW_GAUSS ? 2 : 1);
 			}
 			else
 			{
@@ -735,11 +774,14 @@ class DDShip : PlayerPawn
 		switch (primary)
 		{
 		case DD.PW_LASER:
+		case DD.PW_SUPERLASER:
 		{
 			class<Actor> bolt = 'DDLaserBolt1';
-			if (laserLevel == 1) bolt = 'DDLaserBolt2';
-			else if (laserLevel == 2) bolt = 'DDLaserBolt3';
-			else if (laserLevel >= 3) bolt = 'DDLaserBolt4';
+			if (id == 1) bolt = 'DDLaserBolt2';
+			else if (id == 2) bolt = 'DDLaserBolt3';
+			else if (id == 3) bolt = 'DDLaserBolt4';
+			else if (id == 30) bolt = 'DDLaserBolt5';
+			else if (id == 31) bolt = 'DDLaserBolt6';
 			double mult = quadLasers ? 0.75 : 1.0;
 			FireFromGun(bolt, id, 0, 0, 0, true, mult);
 			FireFromGun(bolt, id, 1, 0, 0, false, mult);
@@ -770,6 +812,27 @@ class DDShip : PlayerPawn
 		case DD.PW_PLASMA:
 			FireFromGun('DDPlasmaBlob', id, 0, 0, 0, true);
 			FireFromGun('DDPlasmaBlob', id, 1, 0, 0, false);
+			break;
+		case DD.PW_GAUSS:
+			FireFromGun('DDGaussRound', id, 6, frandom(-1, 1) / 64, frandom(-1, 1) / 64, true);
+			break;
+		case DD.PW_HELIX:
+		{
+			// Five blobs in a line that turns 22.5 degrees each shot.
+			static const double hr[] = { 1./16, 1./17, 1./22, 1./42, 0, -1./42, -1./22, -1./17 };
+			static const double hu[] = { 0, 1./42, 1./22, 1./17, 1./16, 1./17, 1./22, 1./42 };
+			double r = hr[helixOrient], u = hu[helixOrient];
+			FireFromGun('DDHelixBlob', id, 6, 0, 0, true);
+			FireFromGun('DDHelixBlob', id, 6, r, u, false);
+			FireFromGun('DDHelixBlob', id, 6, -r, -u, false);
+			FireFromGun('DDHelixBlob', id, 6, r * 2, u * 2, false);
+			FireFromGun('DDHelixBlob', id, 6, -r * 2, -u * 2, false);
+			helixOrient = (helixOrient + 1) % 8;
+			break;
+		}
+		case DD.PW_PHOENIX:
+			FireFromGun('DDPhoenixBlob', id, 0, 0, 0, true);
+			FireFromGun('DDPhoenixBlob', id, 1, 0, 0, false);
 			break;
 		case DD.PW_FUSION:
 			FireFromGun('DDFusionBolt', id, 0, 0, 0, true, multiplier);
@@ -861,10 +924,37 @@ class DDShip : PlayerPawn
 			FireFromGun('DDSmartMissile', id, 7, 0, 0, true);
 			break;
 		case DD.SW_MEGA:
-			FireFromGun('DDMegaMissile', id, 7, 0, 0, true);
+		case DD.SW_EARTHSHAKER:
+			FireFromGun(secondary == DD.SW_MEGA ? 'DDMegaMissile' : 'DDEarthshaker', id, 7, 0, 0, true);
 			shipVel -= fwd * (128. / DD.SHIP_MASS * DD.SCALE);
 			Vel = shipVel / TICRATE;
 			rotVel += (frandom(-.25, .25), frandom(-.25, .25), frandom(-.25, .25)) * 0.25;
+			break;
+		case DD.SW_FLASH:
+			FireFromGun('DDFlashMissile', id, 4 + (missileGun & 1), 0, 0, true);
+			missileGun++;
+			break;
+		case DD.SW_GUIDED:
+		{
+			// A new guided missile takes over from the last one, which then
+			// homes on its own.
+			if (guided) guided.guided = false;
+			let m = DDGuidedMissile(FireFromGun('DDGuidedMissile', id, 4 + (missileGun & 1), 0, 0, true));
+			missileGun++;
+			if (m)
+			{
+				m.guided = true;
+				guided = m;
+				player.camera = m;
+			}
+			break;
+		}
+		case DD.SW_SMARTMINE:
+			FireFromGun('DDSmartMine', id, 7, 0, 0, true);
+			break;
+		case DD.SW_MERCURY:
+			FireFromGun('DDMercuryMissile', id, 4 + (missileGun & 1), 0, 0, true);
+			missileGun++;
 			break;
 		}
 		if (CountInv(ammo) <= 0) AutoSelectSecondary();
@@ -921,7 +1011,7 @@ class DDShip : PlayerPawn
 		mo.InitStats(s);
 
 		double speed = s.speed * DD.SCALE;
-		if (weaponId == 16)
+		if (weaponId == 16 || weaponId == 38)
 		{
 			// Proximity bombs keep the ship's forward speed.
 			speed = shipVel dot fwd;
@@ -992,10 +1082,13 @@ class DDShip : PlayerPawn
 	// auto_select_weapon(): pick the best secondary that has ammo.
 	void AutoSelectSecondary()
 	{
-		static const int order[] = { DD.SW_MEGA, DD.SW_SMART, DD.SW_HOMING, DD.SW_CONCUSSION, DD.SW_PROXIMITY };
+		static const int order[] = { DD.SW_EARTHSHAKER, DD.SW_MEGA, DD.SW_MERCURY, DD.SW_SMART, DD.SW_GUIDED,
+			DD.SW_HOMING, DD.SW_FLASH, DD.SW_CONCUSSION, DD.SW_PROXIMITY, DD.SW_SMARTMINE };
 		for (int i = 0; i < order.Size(); i++)
 		{
-			if (order[i] == DD.SW_PROXIMITY) continue;   // never auto-select bombs
+			// Never auto-select bombs (or guided missiles, which take over
+			// the view).
+			if (order[i] == DD.SW_PROXIMITY || order[i] == DD.SW_SMARTMINE || order[i] == DD.SW_GUIDED) continue;
 			if (CountInv(DD.SecondaryAmmo(order[i])) > 0)
 			{
 				secondary = order[i];
@@ -1006,8 +1099,10 @@ class DDShip : PlayerPawn
 
 	void AutoSelectPrimary()
 	{
-		static const class<Weapon> order[] = { 'DDFusionCannon', 'DDPlasmaCannon', 'DDSpreadfireCannon', 'DDVulcanCannon', 'DDLaserCannon' };
-		static const int prim[] = { DD.PW_FUSION, DD.PW_PLASMA, DD.PW_SPREADFIRE, DD.PW_VULCAN, DD.PW_LASER };
+		static const class<Weapon> order[] = { 'DDOmegaCannon', 'DDFusionCannon', 'DDPhoenixCannon', 'DDPlasmaCannon',
+			'DDHelixCannon', 'DDSpreadfireCannon', 'DDGaussCannon', 'DDVulcanCannon', 'DDSuperLaserCannon', 'DDLaserCannon' };
+		static const int prim[] = { DD.PW_OMEGA, DD.PW_FUSION, DD.PW_PHOENIX, DD.PW_PLASMA,
+			DD.PW_HELIX, DD.PW_SPREADFIRE, DD.PW_GAUSS, DD.PW_VULCAN, DD.PW_SUPERLASER, DD.PW_LASER };
 		int cur = CurrentPrimary();
 		for (int i = 0; i < order.Size(); i++)
 		{
@@ -1043,6 +1138,21 @@ class DDShip : PlayerPawn
 	void A_DDShipDeath()
 	{
 		SetRearView(false);
+		// Descent II: let go of a guided missile, stop the afterburner and
+		// the headlight.
+		if (guided)
+		{
+			guided.guided = false;
+			guided = null;
+		}
+		player.camera = self;
+		afterburnerHeld = false;
+		if (afterburnerOn)
+		{
+			A_StopSound(CHAN_6);
+			afterburnerOn = false;
+		}
+		if (headlightOn) SetHeadlight(false);
 		ViewAngle = ViewPitch = ViewRoll = 0;
 		let fx = DDEffect(Spawn('DDEffect', pos + (0, 0, Height / 2), ALLOW_REPLACE));
 		if (fx) fx.Setup(0, 40);

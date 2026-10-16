@@ -4,16 +4,20 @@ ddconvert.py - build dd_descent_assets.pk3 from your own Descent 1 data files.
 
 Doomscent does not ship any Descent data.  This tool reads DESCENT.HOG and
 DESCENT.PIG (registered 1.4/1.5, or shareware) and writes a GZDoom resource
-archive holding the cockpit, gauges, weapon/powerup sprites, weapon models
-and sounds the mod uses.
+archive holding the cockpit, gauges, weapon/powerup sprites, weapon models,
+sounds and music the mod uses.  With --descent2 it reads Descent II's
+DESCENT2.HOG, DESCENT2.HAM, GROUPA.PIG and DESCENT2.S22 instead and writes
+dd_descent2_assets.pk3 for Descent II mode.
 
 Usage:
     python ddconvert.py <descent dir or DESCENT.PIG> [-o dd_descent_assets.pk3]
+    python ddconvert.py --descent2 <descent ii dir> [-o dd_descent2_assets.pk3]
 
 Only the Python 3 standard library is needed.
 
-File formats follow the Descent 1 source release (PIGGY.C, BM.C, INTERP.ASM),
-(c) 1993-1998 Parallax Software, used under its non-commercial licence.
+File formats follow the Descent 1 and Descent 2 source releases (PIGGY.C,
+BM.C, INTERP.ASM), (c) 1993-1998 Parallax Software, used under its
+non-commercial licence.
 """
 
 import argparse
@@ -117,6 +121,30 @@ VCLIP_SPRITES = {
     'DP43': 43, 'DP44': 44, 'DP45': 45, 'DP46': 46, 'DP47': 47,
     'DP49': 49, 'DP51': 51,
 }
+
+# Descent II extras (same names as above where D1 has the thing).
+D2_GAUGE_NAMES = {20: 'DDAFTBRN'}
+D2_WEAPON_PICTURES = {30: 'DDWSLSR', 32: 'DDWGAUS', 33: 'DDWHELX', 34: 'DDWPHNX',
+                      35: 'DDWOMEG', 36: 'DDWFLSH', 37: 'DDWGUID', 38: 'DDWSMIN',
+                      39: 'DDWMERC', 40: 'DDWSHAK'}
+D2_WEAPON_MODELS = {30: 'laser5', 31: 'laser6', 36: 'flash', 37: 'guided',
+                    39: 'mercury', 40: 'shaker', 54: 'shakerkid'}
+D2_MODEL_ACTORS = {'DDLaserBolt5': 'laser5', 'DDLaserBolt6': 'laser6',
+                   'DDFlashMissile': 'flash', 'DDGuidedMissile': 'guided',
+                   'DDMercuryMissile': 'mercury', 'DDEarthshaker': 'shaker',
+                   'DDShakerChild': 'shakerkid'}
+# Weapon, impact and explosion vclips, and powerup vclips.
+D2_EFFECT_VCLIPS = [68, 80, 85, 86, 87, 88, 92, 95, 98, 103, 104, 105, 106]
+D2_POWERUP_VCLIPS = [69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 81, 82, 83, 89, 90, 91, 102]
+
+
+def vclip_sprite(prefix, vc):
+    """Sprite name for a vclip: DX05, ..., DX99 then DY00 for 100 (DP/DQ
+    for powerups)."""
+    if vc < 100:
+        return '%s%02d' % (prefix, vc)
+    return '%s%s%02d' % (prefix[0], chr(ord(prefix[1]) + 1), vc - 100)
+
 
 # Single bitmaps used as sprites (name in PIG -> 4-letter sprite).
 BITMAP_SPRITES = {'sprdblob': 'DBSP', 'blob01': 'DBVU'}
@@ -311,6 +339,191 @@ class GameData:
         self.cockpits = struct.unpack_from('<4H', d, o)
         o += 8
 
+
+
+# --------------------------------------------------------------------------
+# Descent II: DESCENT2.HAM (game tables), *.PIG (bitmaps), DESCENT2.S22
+# (sounds).  Layouts follow the Descent 2 source (PIGGY.C, BM.C).
+
+BM_FLAG_RLE_BIG = 32
+
+D2_SIZE_TMAP_INFO = 20
+D2_SIZE_ECLIP = 130
+D2_SIZE_WCLIP = 126
+D2_SIZE_ROBOT_INFO = 480
+D2_WEAPON_FMT = '<bbhh' + 'bbh' + 'bbh' + 'bbh' + 'bbbb' + 'BBbbb' + 'iii' + 'H' + 'iii' + '5i5i' + '7i' + 'HH'
+D2_SIZE_WEAPON_INFO = struct.calcsize(D2_WEAPON_FMT)   # 125
+D2_SIZE_REACTOR = 200
+
+
+class Pig2(Pig):
+    def __init__(self, path, sound_path=None):
+        self.data = open(path, 'rb').read()
+        self.gamedata = None
+        if self.data[:4] != b'PPIG':
+            raise DescentError('%s is not a Descent II PIG file' % path)
+        nbm = struct.unpack_from('<i', self.data, 8)[0]
+        q = 12
+        base = q + nbm * 18
+        self.bitmaps = [None]
+        self.by_name = {}
+        for _ in range(nbm):
+            name, dflags, w, h, whx, flags, avg, off = struct.unpack_from('<8sBBBBBBi', self.data, q)
+            q += 18
+            b = Bitmap()
+            b.name = name.split(b'\0')[0].decode('latin-1').lower()
+            if dflags & DBM_FLAG_ABM:
+                b.name += '#%d' % (dflags & 63)
+            b.width = w + ((whx & 0x0f) << 8)
+            b.height = h + ((whx & 0xf0) << 4)
+            b.flags, b.offset = flags, base + off
+            self.bitmaps.append(b)
+            self.by_name.setdefault(b.name, len(self.bitmaps) - 1)
+        self.sounds = []
+        self.sound_data = b''
+        if sound_path:
+            d = open(sound_path, 'rb').read()
+            if d[:4] != b'DSND':
+                raise DescentError('%s is not a Descent II sound file' % sound_path)
+            self.sound_data = d
+            n = struct.unpack_from('<i', d, 8)[0]
+            q = 12
+            base = q + n * 20
+            for _ in range(n):
+                name, length, dlen, off = struct.unpack_from('<8siii', d, q)
+                q += 20
+                snd = Sound()
+                snd.name = name.split(b'\0')[0].decode('latin-1').lower()
+                snd.length, snd.offset = length, base + off
+                self.sounds.append(snd)
+
+    def pixels(self, index):
+        b = self.bitmaps[index]
+        if not b.flags & BM_FLAG_RLE_BIG:
+            return Pig.pixels(self, index)
+        # Big RLE: 16-bit row sizes (cockpits and other wide bitmaps).
+        w, h, d = b.width, b.height, self.data
+        p = b.offset + 4
+        sizes = struct.unpack_from('<%dH' % h, d, p)
+        p += h * 2
+        out = bytearray()
+        for y in range(h):
+            row = bytearray()
+            q, end = p, p + sizes[y]
+            while q < end:
+                c = d[q]
+                q += 1
+                if (c & 0xE0) == 0xE0:
+                    n = c & 0x1F
+                    if n == 0:
+                        break
+                    row += bytes([d[q]]) * n
+                    q += 1
+                else:
+                    row.append(c)
+            row = row[:w]
+            row += b'\0' * (w - len(row))
+            out += row
+            p = end
+        return w, h, b.flags, bytes(out)
+
+    def sound_pcm(self, s):
+        return self.sound_data[s.offset:s.offset + s.length]
+
+
+class GameData2:
+    """DESCENT2.HAM (bm_read_all), with the fields GameData has.  Weapon
+    tuples are rearranged into Descent 1's layout (see WEAPON_FMT) so the
+    rest of the converter can treat both games alike."""
+
+    def __init__(self, d):
+        if d[:4] != b'HAM!':
+            raise DescentError('not a Descent II HAM file')
+        o = 4
+        version = struct.unpack_from('<i', d, o)[0]
+        o += 4
+        if version < 3:
+            o += 4                                      # sound offset
+
+        def i32():
+            nonlocal o
+            v = struct.unpack_from('<i', d, o)[0]
+            o += 4
+            return v
+
+        n = i32()                                       # textures
+        o += n * 2 + n * D2_SIZE_TMAP_INFO
+        n = i32()
+        self.sound_map = list(d[o:o + n])
+        o += n * 2
+        n = i32()
+        self.vclips = []
+        self.vclip_sounds = []
+        for i in range(n):
+            play_time, nframes, frame_time, flags, snd = struct.unpack_from('<iiiih', d, o)
+            frames = struct.unpack_from('<30H', d, o + 18)
+            light = struct.unpack_from('<i', d, o + 78)[0]
+            self.vclips.append((max(nframes, 0), fix(frame_time), frames[:max(nframes, 0)], fix(light)))
+            self.vclip_sounds.append(snd)
+            o += SIZE_VCLIP
+        self.vclips += [(0, 0, (), 0)] * max(0, 120 - n)
+        self.vclip_sounds += [-1] * max(0, 120 - n)
+        n = i32()
+        o += n * D2_SIZE_ECLIP
+        n = i32()
+        o += n * D2_SIZE_WCLIP
+        n = i32()
+        if n and struct.unpack_from('<i', d, o + D2_SIZE_ROBOT_INFO - 4)[0] != 0xabcd:
+            raise DescentError('robot table marker mismatch')
+        o += n * D2_SIZE_ROBOT_INFO
+        n = i32()
+        o += n * SIZE_JOINTPOS
+        self.n_weapons = i32()
+        self.weapons = []
+        self.weapons2 = []
+        for i in range(self.n_weapons):
+            w = struct.unpack_from(D2_WEAPON_FMT, d, o)
+            o += D2_SIZE_WEAPON_INFO
+            self.weapons2.append(w)
+            # -> D1 order: render, model, inner, persistent, flash vclip,
+            # flash sound, robot hit vclip/sound, wall hit vclip/sound,
+            # fire count, ammo usage, weapon vclip, destroyable, matter,
+            # bounce, homing, 3 x pad, energy, fire wait, bitmap, blob,
+            # flash, impact sizes, strength[5], speed[5], 7 fixes, picture.
+            self.weapons.append((w[0], w[2], w[3], w[1], w[4], w[6], w[5], w[9], w[7], w[12],
+                                 w[8], w[10], w[11], w[13], w[14], w[15], w[16], 0, 0, 0,
+                                 w[22], w[23], w[25], w[26], w[27], w[28]) + w[29:46] + (w[46],))
+        n = i32()
+        self.powerups = [struct.unpack_from('<iiii', d, o + i * SIZE_POWERUP_INFO) for i in range(n)]
+        o += n * SIZE_POWERUP_INFO
+        n = i32()
+        self.models = []
+        for i in range(n):
+            self.models.append(struct.unpack_from(POLYMODEL_FMT, d, o))
+            o += SIZE_POLYMODEL
+        self.model_data = []
+        for m in self.models:
+            self.model_data.append(d[o:o + m[1]])
+            o += m[1]
+        o += n * 4 * 2                                  # Dying/Dead_modelnums
+        n = i32()
+        self.gauges = struct.unpack_from('<%dH' % n, d, o)
+        self.gauges_hires = struct.unpack_from('<%dH' % n, d, o + n * 2)
+        o += n * 4
+        n = i32()
+        self.obj_bitmaps = struct.unpack_from('<%dH' % n, d, o)
+        self.obj_bitmap_ptrs = struct.unpack_from('<%dH' % n, d, o + n * 2)
+        o += n * 4
+        self.ship = struct.unpack_from('<ii7i24i', d, o)
+        o += 132
+        n = i32()
+        self.cockpits = struct.unpack_from('<%dH' % n, d, o)
+        o += n * 2
+        i32()                                           # First_multi_bitmap_num
+        n = i32()
+        o += n * D2_SIZE_REACTOR
+        i32()                                           # Marker_model_num
+        self.trailing = len(d) - o                      # (extra data, unused)
 
 # --------------------------------------------------------------------------
 # PNG / WAV writers
@@ -517,13 +730,22 @@ def wav(pcm, rate=11025):
 # --------------------------------------------------------------------------
 
 class Converter:
-    def __init__(self, hog, pig, out):
+    def __init__(self, hog, pig, out, ham=None, sounds=None):
         self.hog = read_hog(hog)
-        self.pig = Pig(pig)
-        self.gd = self.pig.gamedata
-        pal = self.hog.get('palette.256')
+        self.d2 = ham is not None
+        if self.d2:
+            self.pig = Pig2(pig, sounds)
+            with open(ham, 'rb') as f:
+                self.gd = GameData2(f.read())
+            palname = 'groupa.256'
+        else:
+            self.pig = Pig(pig)
+            self.gd = self.pig.gamedata
+            palname = 'palette.256'
+        pal = self.hog.get(palname)
         if pal is None:
-            raise DescentError('palette.256 missing from HOG')
+            raise DescentError('%s missing from HOG' % palname)
+        self.textures = []
         self.palette = [(min(255, pal[i * 3] * 255 // 63),
                          min(255, pal[i * 3 + 1] * 255 // 63),
                          min(255, pal[i * 3 + 2] * 255 // 63)) for i in range(256)]
@@ -535,10 +757,10 @@ class Converter:
 
     # -- images ------------------------------------------------------------
 
-    def rgba(self, index, keep_black=False):
+    def rgba(self, index, keep_black=False, transparent=False):
         w, h, flags, px = self.pig.pixels(index)
         out = bytearray(w * h * 4)
-        transparent = flags & (BM_FLAG_TRANSPARENT | BM_FLAG_SUPER_TRANSPARENT)
+        transparent = transparent or flags & (BM_FLAG_TRANSPARENT | BM_FLAG_SUPER_TRANSPARENT)
         for i, c in enumerate(px):
             if transparent and c >= 254:
                 continue
@@ -551,6 +773,18 @@ class Converter:
         self.zip.writestr(path, png(w, h, data, offsets))
         return w, h
 
+    def write_hud(self, name, index, hires=0, transparent=False):
+        """A HUD graphic.  Descent II's 640x480 versions are used when there
+        are some, scaled down by a TEXTURES entry to the 320x200 layout the
+        HUD is drawn in (sharper on today's screens)."""
+        if not hires:
+            return self.write_graphic('graphics/%s.png' % name, index)
+        w, h, data = self.rgba(hires, transparent=transparent)
+        path = 'hud/%s.png' % name.lower()
+        self.zip.writestr(path, png(w, h, data))
+        self.textures.append('Graphic "%s", %d, %d\n{\n\tXScale 2.0\n\tYScale 2.4\n'
+                             '\tPatch "%s", 0, 0\n}' % (name, w, h, path))
+
     def bitmap_index(self, name):
         return self.pig.by_name.get(name.lower())
 
@@ -560,22 +794,27 @@ class Converter:
         gd = self.gd
         cockpit = gd.cockpits[0] if gd else self.bitmap_index('cockpit')
         if cockpit:
-            self.write_graphic('graphics/DDCOCKPT.png', cockpit)
+            self.write_hud('DDCOCKPT', cockpit, gd.cockpits[3] if self.d2 else 0, True)
         rear = gd.cockpits[1] if gd else self.bitmap_index('rearview')
         if rear:
-            self.write_graphic('graphics/DDREARVW.png', rear)
+            self.write_hud('DDREARVW', rear, gd.cockpits[4] if self.d2 else 0, True)
         status = gd.cockpits[2] if gd else self.bitmap_index('status')
         if status:
             self.write_graphic('graphics/DDSTATUS.png', status)
         if gd:
-            for gi, name in GAUGE_NAMES.items():
+            gauges = dict(GAUGE_NAMES)
+            pictures = dict(WEAPON_PICTURES)
+            if self.d2:
+                gauges.update(D2_GAUGE_NAMES)
+                pictures.update(D2_WEAPON_PICTURES)
+            for gi, name in gauges.items():
                 idx = gd.gauges[gi]
                 if idx:
-                    self.write_graphic('graphics/%s.png' % name, idx)
-            for wi, name in WEAPON_PICTURES.items():
+                    self.write_hud(name, idx, gd.gauges_hires[gi] if self.d2 else 0)
+            for wi, name in pictures.items():
                 pic = gd.weapons[wi][43]
                 if pic:
-                    self.write_graphic('graphics/%s.png' % name, pic)
+                    self.write_hud(name, pic, gd.weapons2[wi][47] if self.d2 else 0)
         self.report.append('HUD graphics')
 
     def convert_sprites(self):
@@ -593,6 +832,14 @@ class Converter:
                     b = self.pig.bitmaps[f]
                     self.write_graphic('sprites/%s%s0.png' % (sprite, FRAME_LETTERS[k]), f,
                                        (b.width // 2, b.height // 2))
+        if self.d2:
+            for vcs, prefix in ((D2_EFFECT_VCLIPS, 'DX'), (D2_POWERUP_VCLIPS, 'DP')):
+                for vc in vcs:
+                    frames = [f for f in self.gd.vclips[vc][2] if f][:26]
+                    for k, f in enumerate(frames):
+                        b = self.pig.bitmaps[f]
+                        self.write_graphic('sprites/%s%s0.png' % (vclip_sprite(prefix, vc), FRAME_LETTERS[k]),
+                                           f, (b.width // 2, b.height // 2))
         for pigname, sprite in BITMAP_SPRITES.items():
             idx = self.bitmap_index(pigname) or self.bitmap_index(pigname + '#0')
             if idx:
@@ -602,7 +849,8 @@ class Converter:
 
     def convert_sounds(self):
         for s in self.pig.sounds:
-            self.zip.writestr('sounds/dd/%s.wav' % s.name, wav(self.pig.sound_pcm(s)))
+            self.zip.writestr('sounds/dd/%s.wav' % s.name,
+                              wav(self.pig.sound_pcm(s), 22050 if self.d2 else 11025))
             self.sndinfo.append('dd/%s "sounds/dd/%s.wav"' % (s.name, s.name))
         if self.gd:
             # Logical aliases by Descent sound number so the mod can use the
@@ -803,7 +1051,10 @@ class Converter:
         if not self.gd:
             return
         done = 0
-        for wi, name in WEAPON_MODELS.items():
+        models = dict(WEAPON_MODELS)
+        if self.d2:
+            models.update(D2_WEAPON_MODELS)
+        for wi, name in models.items():
             w = self.gd.weapons[wi]
             if w[0] != 2 or w[1] < 0:
                 continue
@@ -825,7 +1076,10 @@ class Converter:
         self.report.append('%d weapon models' % done)
 
     def write_modeldef(self):
-        for actor, name in MODEL_ACTORS.items():
+        actors = dict(MODEL_ACTORS)
+        if self.d2:
+            actors.update(D2_MODEL_ACTORS)
+        for actor, name in actors.items():
             if name not in self.converted_models:
                 continue
             lines = ['Model %s' % actor, '{', '\tPath "models/dd"',
@@ -840,6 +1094,23 @@ class Converter:
                 lines.append('\tFrameIndex DMDL A 1 0')
             lines.append('}')
             self.modeldef.append('\n'.join(lines))
+
+    def convert_music(self):
+        """Descent's songs for the mod's dd_music option: DDGAMEnn (level
+        music), DDTITLE, DDBRIEF, DDENDLEV and DDCREDIT.  MIDI versions
+        (Descent II) are preferred over HMP; GZDoom plays both."""
+        names = {'descent': 'DDTITLE', 'briefing': 'DDBRIEF', 'endlevel': 'DDENDLEV',
+                 'credits': 'DDCREDIT'}
+        for i in range(1, 100):
+            names['game%02d' % i] = 'DDGAME%02d' % i
+        n = 0
+        for src, lump in names.items():
+            data = self.hog.get(src + '.mid') or self.hog.get(src + '.hmp')
+            if data:
+                self.zip.writestr('music/%s.mid' % lump.lower(), data)
+                n += 1
+        if n:
+            self.report.append('%d songs' % n)
 
     def convert_ickface(self, path):
         """Ick Mode's monster face: data/ickface.png if there is one, else a
@@ -866,6 +1137,11 @@ class Converter:
         self.zip.writestr('sndinfo.ddassets', '\n'.join(self.sndinfo) + '\n')
         if self.modeldef:
             self.zip.writestr('modeldef.ddassets', '\n\n'.join(self.modeldef) + '\n')
+        if self.textures:
+            self.zip.writestr('textures.ddassets', '\n\n'.join(self.textures) + '\n')
+        if self.d2:
+            # The mod checks for this lump to switch to Descent II mode.
+            self.zip.writestr('ddescent2.txt', 'Descent II assets\n')
         self.zip.writestr('ddassets.txt',
                           'Doomscent asset pack generated by ddconvert.py.\n'
                           'Contains data from your own copy of Descent; do not redistribute.\n')
@@ -883,25 +1159,43 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     ap.add_argument('source', help='Descent directory, or path to DESCENT.PIG')
     ap.add_argument('--hog', help='path to DESCENT.HOG (default: next to the PIG)')
-    ap.add_argument('-o', '--output', default='dd_descent_assets.pk3')
+    ap.add_argument('--descent2', action='store_true',
+                    help='convert Descent II (DESCENT2.HOG, DESCENT2.HAM, GROUPA.PIG, '
+                         'DESCENT2.S22) instead of Descent 1')
+    ap.add_argument('-o', '--output')
     args = ap.parse_args(argv)
 
-    if os.path.isdir(args.source):
-        pig = find_file(args.source, 'descent.pig')
-        hog = args.hog or find_file(args.source, 'descent.hog')
+    ham = sounds = None
+    if args.descent2:
+        d = args.source if os.path.isdir(args.source) else os.path.dirname(os.path.abspath(args.source))
+        hog = args.hog or find_file(d, 'descent2.hog')
+        ham = find_file(d, 'descent2.ham')
+        pig = find_file(d, 'groupa.pig')
+        sounds = find_file(d, 'descent2.s22') or find_file(d, 'descent2.s11')
+        for f, name in ((hog, 'DESCENT2.HOG'), (ham, 'DESCENT2.HAM'), (pig, 'GROUPA.PIG'),
+                        (sounds, 'DESCENT2.S22')):
+            if not f:
+                sys.exit('error: %s not found in %s' % (name, d))
+        output = args.output or 'dd_descent2_assets.pk3'
     else:
-        pig = args.source
-        hog = args.hog or find_file(os.path.dirname(os.path.abspath(pig)) or '.', 'descent.hog')
-    if not pig or not os.path.exists(pig):
-        sys.exit('error: DESCENT.PIG not found')
-    if not hog or not os.path.exists(hog):
-        sys.exit('error: DESCENT.HOG not found (pass --hog)')
+        if os.path.isdir(args.source):
+            pig = find_file(args.source, 'descent.pig')
+            hog = args.hog or find_file(args.source, 'descent.hog')
+        else:
+            pig = args.source
+            hog = args.hog or find_file(os.path.dirname(os.path.abspath(pig)) or '.', 'descent.hog')
+        if not pig or not os.path.exists(pig):
+            sys.exit('error: DESCENT.PIG not found')
+        if not hog or not os.path.exists(hog):
+            sys.exit('error: DESCENT.HOG not found (pass --hog)')
+        output = args.output or 'dd_descent_assets.pk3'
 
     try:
-        c = Converter(hog, pig, args.output)
+        c = Converter(hog, pig, output, ham, sounds)
         c.convert_hud()
         c.convert_sprites()
         c.convert_sounds()
+        c.convert_music()
         c.convert_ickface(find_file(os.path.dirname(os.path.abspath(pig)), 'ickface.png'))
         c.convert_fonts()
         c.convert_models()
@@ -909,11 +1203,10 @@ def main(argv=None):
         c.finish()
     except DescentError as e:
         sys.exit('error: %s' % e)
-    print('wrote %s (%s)' % (args.output, ', '.join(c.report)))
+    print('wrote %s (%s)' % (output, ', '.join(c.report)))
     if not c.gd:
         print('note: this PIG has no embedded game tables (shareware?); '
               'weapon models were not converted, sprites are used instead.')
-
 
 if __name__ == '__main__':
     main()

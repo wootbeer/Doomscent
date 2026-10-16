@@ -8,6 +8,14 @@
   instead of leaving corpses
 - The launchers reconvert the Descent data when `data/ickface.png` is added
   or changed
+- Descent music option (Options → Doomscent Options → Descent music): each
+  level plays one of Descent's songs, as in Descent
+- Descent II mode (`Doomscent2.bat`, or `-descent2`; Descent 1 stays the
+  default): converts your DESCENT2.HOG/HAM, GROUPA.PIG and DESCENT2.S22, and
+  adds Descent II's high-resolution cockpit, sounds and music, its weapons
+  (super laser, gauss, helix, phoenix, omega, flash, guided, smart mine,
+  mercury and earthshaker missiles) and equipment (afterburner, headlight,
+  energy converter, ammo rack, full map)
 
 # Doomscent 0.3.0
 

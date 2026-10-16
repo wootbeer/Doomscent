@@ -7,6 +7,10 @@
 *.PIG
 *.ham
 *.HAM
+*.s11
+*.S11
+*.s22
+*.S22
 
 # Built / generated archives (the asset pack contains Descent data).
 *.pk3

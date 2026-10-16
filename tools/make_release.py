@@ -30,6 +30,7 @@ def main():
     out = os.path.join(args.outdir, name + '.zip')
     files = {
         'Doomscent.bat': 'Doomscent.bat',
+        'Doomscent2.bat': 'Doomscent2.bat',
         'doomscent.sh': 'doomscent.sh',
         'README.md': 'README.md',
         'LICENSE': 'LICENSE',

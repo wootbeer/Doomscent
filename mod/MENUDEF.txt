@@ -21,6 +21,7 @@ OptionMenu "DDOptions"
 	Slider "Damage taken", "dd_damagetaken", 0.1, 4.0, 0.1, 1
 	Option "Open doors by flying into them", "dd_bumpuse", "OnOff"
 	Option "Cockpit", "dd_cockpit", "OnOff"
+	Option "Descent music", "dd_music", "OnOff"
 	StaticText ""
 	Option "Ick Mode", "dd_ickmode", "OnOff"
 	StaticText ""

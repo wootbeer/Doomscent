@@ -1,8 +1,9 @@
 # Doomscent launcher (Windows).  Doomscent.bat runs this.
 #
 # First run: offers to download GZDoom, converts your Descent files into
-# dd_descent_assets.pk3, then starts the game.  Extra arguments are passed
-# to GZDoom (e.g. .\Doomscent.bat -iwad DOOM2.WAD +map MAP01).
+# dd_descent_assets.pk3, then starts the game.  -descent2 plays in Descent
+# II mode (dd_descent2_assets.pk3).  Other arguments are passed to GZDoom
+# (e.g. .\Doomscent.bat -iwad DOOM2.WAD +map MAP01).
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'   # much faster Invoke-WebRequest
@@ -65,7 +66,28 @@ if (Test-Path $ModSrc) {
 if (-not (Test-Path $ModPk3)) { Fail "doomscent.pk3 is missing; re-download the release." }
 
 # --- Descent assets -----------------------------------------------------------
-$Assets = Join-Path $Root 'dd_descent_assets.pk3'
+# Descent 1 by default.  "-descent2" (Doomscent2.bat) plays in Descent II
+# mode, which uses its own asset pack; so does having only Descent II's files.
+$D2 = $false
+$GZArgs = @()
+foreach ($a in $args) {
+    if ($a -ieq '-descent2' -or $a -ieq '--descent2') { $D2 = $true } else { $GZArgs += $a }
+}
+$D1Files = (Test-Path (Join-Path $Data 'DESCENT.PIG')) -and (Test-Path (Join-Path $Data 'DESCENT.HOG'))
+$D2Files = (Test-Path (Join-Path $Data 'DESCENT2.HOG')) -and (Test-Path (Join-Path $Data 'DESCENT2.HAM')) -and
+           (Test-Path (Join-Path $Data 'GROUPA.PIG')) -and
+           ((Test-Path (Join-Path $Data 'DESCENT2.S22')) -or (Test-Path (Join-Path $Data 'DESCENT2.S11')))
+if (-not $D2 -and -not $D1Files -and $D2Files) { $D2 = $true }
+
+if ($D2) {
+    $Assets = Join-Path $Root 'dd_descent2_assets.pk3'
+    $ConvArgs = @('--descent2', $Data, '-o', $Assets)
+    $Missing = if ($D2Files) { $null } else { "Copy DESCENT2.HOG, DESCENT2.HAM, GROUPA.PIG and DESCENT2.S22 from your copy of Descent II into $Data\ and run this again." }
+} else {
+    $Assets = Join-Path $Root 'dd_descent_assets.pk3'
+    $ConvArgs = @($Data, '-o', $Assets)
+    $Missing = if ($D1Files) { $null } else { "Copy DESCENT.HOG and DESCENT.PIG from your copy of Descent 1 into $Data\ and run this again." }
+}
 $ConvExe = Join-Path $Root 'tools\ddconvert.exe'
 $ConvPy = Join-Path $Root 'tools\ddconvert.py'
 $converter = if (Test-Path $ConvExe) { Get-Item $ConvExe } else { Get-Item $ConvPy }
@@ -77,16 +99,14 @@ if (-not $stale) {
     $stale = $converter.LastWriteTime -gt $built -or ((Test-Path $IckFace) -and (Get-Item $IckFace).LastWriteTime -gt $built)
 }
 if ($stale) {
-    if (-not (Test-Path (Join-Path $Data 'DESCENT.PIG')) -or -not (Test-Path (Join-Path $Data 'DESCENT.HOG'))) {
-        Fail "Copy DESCENT.HOG and DESCENT.PIG from your copy of Descent 1 into $Data\ and run this again."
-    }
+    if ($Missing) { Fail $Missing }
     Write-Host "Converting your Descent data..."
     if ($converter.Extension -eq '.exe') {
-        & $ConvExe $Data -o $Assets
+        & $ConvExe @ConvArgs
     } else {
         $py = Find-Python
         if (-not $py) { Fail "Python 3 is needed to convert the Descent data (https://www.python.org/downloads/)." }
-        & $py[0] $py[1..9] $ConvPy $Data -o $Assets
+        & $py[0] $py[1..9] $ConvPy @ConvArgs
     }
     if ($LASTEXITCODE) { Fail "Converting the Descent data failed (see above)." }
 }
@@ -99,4 +119,4 @@ if (-not $iwads) {
 
 # Run from data\ so GZDoom finds the IWADs there and offers a choice.
 Set-Location $Data
-& $GZDoom -file $Assets $ModPk3 @args
+& $GZDoom -file $Assets $ModPk3 @GZArgs

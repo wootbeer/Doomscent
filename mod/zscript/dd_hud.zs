@@ -192,18 +192,38 @@ class DDStatusBar : BaseStatusBar
 		sy = Screen.GetHeight() / 200.;
 	}
 
-	void Pic(String name, double x, double y, double clipL = -1, double clipR = -1)
+	// Clips are in the picture's own (320x200-space) units from its left
+	// or top edge.  Descent II's hi-res pictures report their 320x200 size
+	// (see the asset pack's TEXTURES).
+	void Pic(String name, double x, double y, double clipL = -1, double clipR = -1, double clipT = -1)
 	{
 		TextureID t = TexMan.CheckForTexture(name, TexMan.Type_Any);
 		if (!t.IsValid()) return;
-		int w, h;
-		[w, h] = TexMan.GetSize(t);
+		Vector2 size = TexMan.GetScaledSize(t);
+		double w = size.x, h = size.y;
 		double cl = clipL >= 0 ? x + clipL : x;
 		double cr = clipR >= 0 ? x + clipR : x + w;
+		double ct = clipT >= 0 ? y + clipT : y;
 		Screen.DrawTexture(t, false, x * sx, y * sy,
 			DTA_DestWidthF, w * sx, DTA_DestHeightF, h * sy,
 			DTA_TopOffset, 0, DTA_LeftOffset, 0,
-			DTA_ClipLeft, int(cl * sx), DTA_ClipRight, int(cr * sx));
+			DTA_ClipLeft, int(cl * sx), DTA_ClipRight, int(cr * sx), DTA_ClipTop, int(ct * sy));
+	}
+
+	static double PicWidth(String name, double fallback)
+	{
+		TextureID t = TexMan.CheckForTexture(name, TexMan.Type_Any);
+		if (!t.IsValid()) return fallback;
+		Vector2 size = TexMan.GetScaledSize(t);
+		return size.x;
+	}
+
+	static double PicHeight(String name, double fallback)
+	{
+		TextureID t = TexMan.CheckForTexture(name, TexMan.Type_Any);
+		if (!t.IsValid()) return fallback;
+		Vector2 size = TexMan.GetScaledSize(t);
+		return size.y;
 	}
 
 	// Descent's gauge colours (gr_getcolor values from GAUGES.C, brightened
@@ -241,9 +261,11 @@ class DDStatusBar : BaseStatusBar
 			DTA_TopOffset, 0, DTA_LeftOffset, 0);
 
 		// Energy bars (draw_energy_bar): they empty from the outside in.
-		int notEnergy = 61 - (min(energy, 100) * 61) / 100;
-		Pic("DDENRGL", 70, 131, notEnergy, -1);
-		Pic("DDENRGR", 190, 131, -1, 64 - notEnergy);
+		bool d2 = DD.IsD2();
+		double barW = PicWidth("DDENRGL", 64);
+		double notEnergy = (61 - (min(energy, 100) * 61) / 100.) * barW / 64;
+		Pic("DDENRGL", d2 ? 68.5 : 70, 131, notEnergy, -1);
+		Pic("DDENRGR", 190, 131, -1, barW - notEnergy);
 
 		// Numerical readout (draw_numerical_display).
 		Pic("DDNUMER", 154, 130);
@@ -264,10 +286,25 @@ class DDStatusBar : BaseStatusBar
 		}
 		Pic("DDSHIP", 151, 160);
 
-		// Keys (draw_keys).
-		Pic(HasKey('BlueCard', 'BlueSkull', 'KeyBlue') ? "DDKEYB" : "DDKEYB0", 45, 152);
-		Pic(HasKey('YellowCard', 'YellowSkull', 'KeyYellow') ? "DDKEYY" : "DDKEYY0", 44, 162);
-		Pic(HasKey('RedCard', 'RedSkull') ? "DDKEYR" : "DDKEYR0", 43, 172);
+		// Keys (draw_keys): Descent II moved them to the right, and put the
+		// afterburner gauge where they were.
+		if (d2)
+		{
+			Pic(HasKey('BlueCard', 'BlueSkull', 'KeyBlue') ? "DDKEYB" : "DDKEYB0", 267.5, 155.8);
+			Pic(HasKey('YellowCard', 'YellowSkull', 'KeyYellow') ? "DDKEYY" : "DDKEYY0", 268.5, 164.6);
+			Pic(HasKey('RedCard', 'RedSkull') ? "DDKEYR" : "DDKEYR0", 269.5, 173.3);
+			if (ship.hasAfterburner)
+			{
+				double h = PicHeight("DDAFTBRN", 27);
+				Pic("DDAFTBRN", 44, 157, -1, -1, (1 - ship.afterburnerCharge) * h);
+			}
+		}
+		else
+		{
+			Pic(HasKey('BlueCard', 'BlueSkull', 'KeyBlue') ? "DDKEYB" : "DDKEYB0", 45, 152);
+			Pic(HasKey('YellowCard', 'YellowSkull', 'KeyYellow') ? "DDKEYY" : "DDKEYY0", 44, 162);
+			Pic(HasKey('RedCard', 'RedSkull') ? "DDKEYR" : "DDKEYR0", 43, 172);
+		}
 
 		// Homing warning light.
 		Pic(ship.homingWarning > 0 && (Level.maptime & 4) ? "DDHOMON" : "DDHOMOF", 7, 171);
@@ -335,22 +372,39 @@ class DDStatusBar : BaseStatusBar
 	void DrawWeaponBoxes(DDShip ship)
 	{
 		int primary = ship.CurrentPrimary();
-		static const String ppics[] = { "DDWLASR", "DDWVULC", "DDWSPRD", "DDWPLAS", "DDWFUSN" };
-		static const String pnames[] = { "$DD_LASER", "$DD_VULCAN", "$DD_SPREADFIRE", "$DD_PLASMA", "$DD_FUSION" };
 		Color green = COL_WEAPON;
 
 		// Primary box (draw_weapon_info_sub).
-		Pic(ppics[primary], 64, 154);
-		Txt(StringTable.Localize(pnames[primary]), 87, 157, green);
-		if (primary == DD.PW_LASER)
+		Pic(DD.PrimaryPicture(primary), 64, 154);
+		String pname = DD.PrimaryName(primary);
+		if (primary == DD.PW_SUPERLASER)
 		{
-			Txt(String.Format("%s: %d", StringTable.Localize("$DD_LVL"), ship.laserLevel + 1), 87, 163, green);
-			if (ship.quadLasers) Txt(StringTable.Localize("$DD_QUAD"), 87, 169, green);
+			// Two words; Descent II splits it over two lines too.
+			Array<String> words;
+			pname.Split(words, " ");
+			Txt(words[0], 87, 157, green);
+			if (words.Size() > 1) Txt(words[1], 87, 163, green);
 		}
-		else if (primary == DD.PW_VULCAN)
+		else
+		{
+			Txt(pname, 87, 157, green);
+		}
+		if (primary == DD.PW_LASER || primary == DD.PW_SUPERLASER)
+		{
+			int lvl = DDShip.PrimaryWeaponId(primary, ship.laserLevel);
+			lvl = lvl >= 30 ? lvl - 25 : lvl + 1;
+			double ly = primary == DD.PW_SUPERLASER ? 169 : 163;
+			Txt(String.Format("%s: %d", StringTable.Localize("$DD_LVL"), lvl), 87, ly, green);
+			if (ship.quadLasers) Txt(StringTable.Localize("$DD_QUAD"), 87, ly + 6, green);
+		}
+		else if (primary == DD.PW_VULCAN || primary == DD.PW_GAUSS)
 		{
 			int rounds = int(ship.CountInv('DDVulcanAmmo') * DD.VULCAN_AMMO_SCALE);
 			Txt(String.Format("%05d", rounds), 93, 171, COL_AMMO);
+		}
+		else if (primary == DD.PW_OMEGA)
+		{
+			Txt(String.Format("%s: %d%%", StringTable.Localize("$DD_CHARGE"), int(ship.omegaCharge * 100)), 87, 165, green);
 		}
 
 		// Secondary box.
@@ -369,17 +423,24 @@ class DDStatusBar : BaseStatusBar
 		int shields = max(CPlayer.health, 0);
 		int energy = ship.CountInv('DDEnergy');
 		int primary = ship.CurrentPrimary();
-		static const String pnames[] = { "$DD_LASER", "$DD_VULCAN", "$DD_SPREADFIRE", "$DD_PLASMA", "$DD_FUSION" };
 
 		Txt(String.Format("%s: %d", StringTable.Localize("$DD_ENERGY"), energy), 4, 186, COL_ENERGY, 1.3);
 		Txt(String.Format("%s: %d", StringTable.Localize("$DD_SHIELD"), shields), 4, 178, COL_SHIELD, 1.3);
 
-		String p = StringTable.Localize(pnames[primary]);
-		if (primary == DD.PW_LASER)
-			p = String.Format("%s %s %d%s", p, StringTable.Localize("$DD_LVL"), ship.laserLevel + 1,
+		String p = DD.PrimaryName(primary);
+		if (primary == DD.PW_LASER || primary == DD.PW_SUPERLASER)
+		{
+			int lvl = DDShip.PrimaryWeaponId(primary, ship.laserLevel);
+			lvl = lvl >= 30 ? lvl - 25 : lvl + 1;
+			p = String.Format("%s %s %d%s", p, StringTable.Localize("$DD_LVL"), lvl,
 				ship.quadLasers ? " " .. StringTable.Localize("$DD_QUAD") : "");
-		else if (primary == DD.PW_VULCAN)
+		}
+		else if (primary == DD.PW_VULCAN || primary == DD.PW_GAUSS)
 			p = String.Format("%s: %d", p, int(ship.CountInv('DDVulcanAmmo') * DD.VULCAN_AMMO_SCALE));
+		else if (primary == DD.PW_OMEGA)
+			p = String.Format("%s: %d%%", p, int(ship.omegaCharge * 100));
+		if (ship.hasAfterburner)
+			Txt(String.Format("BURN: %d%%", int(ship.afterburnerCharge * 100)), 4, 170, COL_ENERGY, 1.3);
 		TxtRight(p, 316, 178, COL_WEAPON, 1.3);
 		TxtRight(String.Format("%s: %d", DD.SecondaryName(ship.secondary), ship.CountInv(DD.SecondaryAmmo(ship.secondary))),
 			316, 186, COL_WEAPON, 1.3);
@@ -395,9 +456,12 @@ class DDStatusBar : BaseStatusBar
 		bool secReady = now >= ship.secondaryReadyTime && ship.CountInv(DD.SecondaryAmmo(ship.secondary)) > 0;
 
 		int primaryBm = primReady ? 1 : 0;
-		if (primaryBm && primary == DD.PW_LASER && ship.quadLasers) primaryBm++;
+		if (primaryBm && (primary == DD.PW_LASER || primary == DD.PW_SUPERLASER) && ship.quadLasers) primaryBm++;
 		int secondaryBm = secReady ? 1 : 0;
-		if (ship.secondary != DD.SW_CONCUSSION && ship.secondary != DD.SW_HOMING)
+		int sw = ship.secondary;
+		bool twoGuns = sw == DD.SW_CONCUSSION || sw == DD.SW_HOMING || sw == DD.SW_FLASH
+			|| sw == DD.SW_GUIDED || sw == DD.SW_MERCURY;
+		if (!twoGuns)
 			secondaryBm += 3;
 		else if (secondaryBm && !(ship.missileGun & 1))
 			secondaryBm++;
