@@ -9,10 +9,7 @@
   Doom, Chex Quest, Heretic and Hexen
 - Descent music option (Options → Doomscent Options → Descent music): each
   level plays one of Descent's songs, as in Descent
-- Ick Mode (Options → Doomscent Options): every monster wears a face
-  (`tools/ickface.png`, or your own `data/ickface.png`) sized to the
-  monster, with side and back views as it turns; monsters bleed green and
-  warp out instead of leaving corpses
+- Ick Mode (Options → Doomscent Options): every monster gets sick of slop!
 - Damage taken slider (Options → Doomscent Options): scales the damage that
   hits the ship; 1.0 (the default) is Doom's own damage
 - Lasers and the fusion bolt glow with their bright core showing, as in
