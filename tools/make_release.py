@@ -38,6 +38,7 @@ def main():
         'data/README.txt': 'data/README.txt',
         'tools/launcher.ps1': 'tools/launcher.ps1',
         'tools/ddconvert.py': 'tools/ddconvert.py',
+        'tools/ickface.png': 'tools/ickface.png',
     }
     with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
         for arc, rel in files.items():

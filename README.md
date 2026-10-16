@@ -157,9 +157,9 @@ the Spider Mastermind). The faces turn to show their sides and the back of
 the head as monsters walk around. Monsters bleed green, and when they die
 they warp out like a Descent ship instead of leaving a corpse.
 
-To use your own face, put a PNG named `ickface.png` (a head on a transparent
-background works best) in the `data` folder. The launcher picks it up on the
-next start. Without one, Ick Mode uses a built-in cartoon face.
+To use a different face, put a PNG named `ickface.png` (a head on a
+transparent background works best) in the `data` folder. The launcher picks
+it up on the next start.
 
 ## How Doom's items map to Descent
 

@@ -2,8 +2,9 @@
 
 - Damage taken slider (Options → Doomscent Options): scales the damage that
   hits the ship; 1.0 (the default) is Doom's own damage
-- Ick Mode (Options → Doomscent Options): every monster wears a face (yours,
-  from `data/ickface.png`, or a built-in one), sized to the monster, with
+- Ick Mode (Options → Doomscent Options): every monster wears a face (the
+  one in `tools/ickface.png`, or your own in `data/ickface.png`), sized to
+  the monster, with
   side and back views as it turns; monsters bleed green and warp out
   instead of leaving corpses
 - The launchers reconvert the Descent data when `data/ickface.png` is added
