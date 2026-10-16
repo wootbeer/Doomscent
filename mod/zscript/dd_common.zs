@@ -60,12 +60,6 @@ class DD abstract
 		return clamp(G_SkillPropertyInt(SKILLP_ACSReturn), 0, 4);
 	}
 
-	static int SecondaryMax(int which)
-	{
-		static const int maxes[] = { 20, 10, 10, 5, 5, 20, 20, 15, 10, 10 };
-		return maxes[which];
-	}
-
 	static class<Inventory> SecondaryAmmo(int which)
 	{
 		switch (which)

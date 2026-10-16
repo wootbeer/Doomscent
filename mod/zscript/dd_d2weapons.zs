@@ -5,8 +5,8 @@ class DDLaserBolt5 : DDLaserBolt1
 {
 	override void PostBeginPlay()
 	{
-		DDProjectile.PostBeginPlay();
-		A_AttachLight('glow', DynamicLight.PointLight, Color(96, 255, 64), 56, 0);
+		Super.PostBeginPlay();
+		A_AttachLight('glow', DynamicLight.PointLight, Color(96, 255, 64), 56, 0);   // replaces the red glow
 	}
 }
 class DDLaserBolt6 : DDLaserBolt5 {}
@@ -121,50 +121,6 @@ class DDOmegaSpark : Actor
 
 //--------------------------------------------------------------------------
 // Secondary weapons
-
-// Six homing children (create_smart_children), as the smart missile,
-// smart mine and earthshaker release.
-class DDSmartChildren abstract play
-{
-	static void Spawn(Actor from, Actor owner, class<DDProjectile> cls, int weaponId, int count, double speedDiv)
-	{
-		Array<Actor> targets;
-		let it = BlockThingsIterator.Create(from, 150 * DD.SCALE);
-		while (it.Next())
-		{
-			let a = it.thing;
-			if (a.bIsMonster && !a.bFriendly && a.health > 0 && a.bShootable && from.Distance3D(a) < 150 * DD.SCALE && from.CheckSight(a))
-				targets.Push(a);
-		}
-		DDWeaponStats s;
-		DDWeaponTable.Get(weaponId, s);
-		for (int i = 0; i < count; i++)
-		{
-			Vector3 dir;
-			Actor goal = null;
-			if (targets.Size() > 0)
-			{
-				goal = targets[random(0, targets.Size() - 1)];
-				dir = (from.Vec3To(goal) + (0, 0, goal.Height / 2)).Unit();
-			}
-			else
-			{
-				dir = (frandom(-1, 1), frandom(-1, 1), frandom(-1, 1));
-				if (dir.Length() < 0.01) dir = (1, 0, 0);
-				dir = dir.Unit();
-			}
-			let child = DDProjectile(Actor.Spawn(cls, from.pos, ALLOW_REPLACE));
-			if (child == null) continue;
-			child.target = owner;
-			child.weaponId = weaponId;
-			child.multiplier = 1;
-			child.InitStats(s);
-			child.trackGoal = goal;
-			child.Vel = dir * (s.speed * DD.SCALE / speedDiv) / TICRATE;
-			child.FaceDirection(dir);
-		}
-	}
-}
 
 // Flash missile: a blinding white flash.  Monsters caught in it lose
 // track of their target for a few seconds; ships in view are dazzled.
@@ -356,7 +312,7 @@ class DDSmartMine : DDProximityBomb
 
 	override void OnImpact()
 	{
-		DDSmartChildren.Spawn(self, target, 'DDSmartMineBlob', 47, 6, 4);
+		DDSmartChildren.Spawn(self, target, 'DDSmartMineBlob', 47);
 	}
 }
 
@@ -383,7 +339,7 @@ class DDEarthshaker : DDMissile
 	override void OnImpact()
 	{
 		A_QuakeEx(6, 6, 6, 70, 0, splashRadius * 6, "", QF_SCALEDOWN);
-		DDSmartChildren.Spawn(self, target, 'DDShakerChild', 54, 6, 4);
+		DDSmartChildren.Spawn(self, target, 'DDShakerChild', 54);
 	}
 }
 

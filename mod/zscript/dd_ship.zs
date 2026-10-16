@@ -54,7 +54,6 @@ class DDShip : PlayerPawn
 	double nextConvertSound;
 	double omegaCharge;          // 0..1
 	double lastOmegaTime;
-	double nextOmegaSound;
 	int helixOrient;
 	DDGuidedMissile guided;
 
@@ -164,6 +163,9 @@ class DDShip : PlayerPawn
 		laserLevel = 0;
 		quadLasers = false;
 		secondary = DD.SW_CONCUSSION;
+		hasAfterburner = hasHeadlight = hasConverter = false;
+		afterburnerCharge = 0;
+		omegaCharge = 1;
 	}
 
 	//======================================================================
@@ -204,10 +206,9 @@ class DDShip : PlayerPawn
 		int buttons = cmd.buttons;
 
 		// --- Rotation ---------------------------------------------------
-		// Mouse and turn keys rotate directly (like modern Descent ports);
-		// banking uses Descent's rotational thrust and drag.  No extra
-		// sensitivity scale here: the renderer previews mouse movement
-		// unscaled between tics (see UpdateViewAngles).
+		// Mouse and turn keys rotate directly, unscaled, so the result
+		// matches GZDoom's between-tic preview (see UpdateViewAngles);
+		// banking uses Descent's rotational thrust and drag.
 		double yawIn = cmd.yaw * (360. / 65536.);            // + = left
 		double pitchIn = 0;
 		if (cmd.pitch == -32768)
@@ -229,11 +230,9 @@ class DDShip : PlayerPawn
 			yawIn += 180. / TURN180_TICKS;
 		}
 
-		// Optional mouse momentum (dd_aimmomentum).  In Descent the mouse
-		// fed the ship's rotational thrust, so turns eased in and out.  Here
-		// the mouse movement is banked and paid out with Descent's
-		// rotational drag (about 0.19s to settle): the total turn is exactly
-		// what you moved, just spread over time.
+		// Mouse momentum (dd_aimmomentum): Descent's mouse fed rotational
+		// thrust, so turns eased in and out.  The movement is banked and
+		// paid out at Descent's rotational drag; the total turn is unchanged.
 		aimMomentum = CVar.GetCVar('dd_aimmomentum', player).GetBool();
 		if (aimMomentum)
 		{
@@ -305,11 +304,9 @@ class DDShip : PlayerPawn
 		double thrustScale = CVar.GetCVar('dd_thrust', player).GetFloat();
 		Vector3 accel = thrustDir * (DD.SHIP_MAX_THRUST * thrustScale / DD.SHIP_MASS * DD.SCALE);
 
-		// PF_WIGGLE: Descent nudges the ship along its up axis by
-		// wiggle * sin(GameTime) every frame (one cycle per second).  Here
-		// that is spread over the physics steps as an acceleration, sized
-		// for the ~30fps Descent ran at, so it is the same at any frame rate.
-		// It moves the ship itself, which GZDoom draws smoothly between tics.
+		// PF_WIGGLE: Descent adds wiggle * sin(GameTime) along the up axis
+		// every frame; applied here as an acceleration sized for Descent's
+		// ~30fps, so it doesn't depend on frame rate.
 		if (CVar.GetCVar('dd_shipbob', player).GetBool())
 		{
 			double wiggle = DD.SHIP_WIGGLE * 30 * DD.PHYS_STEP * sin(360. * shipTics * DD.TIC);
@@ -467,13 +464,9 @@ class DDShip : PlayerPawn
 		if (!flipped && !rearViewChanged) player.cheats |= CF_INTERPVIEWANGLES;
 		rearViewChanged = false;
 
-		// How the renderer turns the view between tics:
-		//  - direct: GZDoom's own path, which adds not-yet-processed mouse
-		//    movement every frame.  Smooth and immediate, but it turns about
-		//    the world's vertical axis, so it is only right when the ship is
-		//    close to level and not banking.
-		//  - interpolated: blend the last two tics.  Correct in any
-		//    orientation, one tic behind the mouse.
+		// Between tics the view is either "direct" (GZDoom adds pending mouse
+		// movement each frame: immediate, but only right near level flight)
+		// or interpolated (correct in any orientation, a tic behind).
 		double rollLimit = directView ? 20 : 10;
 		// With mouse momentum the ship lags the mouse on purpose, and in the
 		// rear view the preview would pitch the wrong way, so always
@@ -626,12 +619,7 @@ class DDShip : PlayerPawn
 	clearscope int CurrentPrimary()
 	{
 		let w = DDPrimaryWeapon(player.ReadyWeapon);
-		if (w) return w.primaryIndex;
-		if (w is 'DDVulcanCannon') return DD.PW_VULCAN;
-		if (w is 'DDSpreadfireCannon') return DD.PW_SPREADFIRE;
-		if (w is 'DDPlasmaCannon') return DD.PW_PLASMA;
-		if (w is 'DDFusionCannon') return DD.PW_FUSION;
-		return DD.PW_LASER;
+		return w ? w.primaryIndex : DD.PW_LASER;
 	}
 
 	clearscope static int PrimaryWeaponId(int primary, int laserLevel)

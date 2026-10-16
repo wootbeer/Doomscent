@@ -176,10 +176,8 @@ class DDPowerup : CustomInventory
 	{
 		Super.PostBeginPlay();
 		SetSpriteScale();
-		// Lift off the floor so the ship can fly into it.  The sprite is
-		// centred on the item, so raise it by half its drawn height plus
-		// the bob, leaving it just touching the floor at the bottom of the
-		// bob (and clear of the ceiling at the top).
+		// Float so the centred sprite just touches the floor at the bottom
+		// of its bob, and stays clear of the ceiling at the top.
 		if (pos.z <= floorz + 1)
 		{
 			double half = SpriteHalfHeight();

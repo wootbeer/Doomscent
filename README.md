@@ -22,7 +22,8 @@ becomes Descent's ship:
     fusion (charge by holding fire).
   - Secondaries: concussion, homing and smart missiles, proximity bombs, mega
     missile. Plus flares.
-  - Damage, speed, fire rate and energy cost come from Descent's weapon tables.
+  - Damage, speed, fire rate and energy cost come from Descent's weapon tables,
+    and the lasers, missiles and fusion bolt use Descent's own 3D models.
 - **Descent powerups.** Doom's pickups are replaced by Descent's spinning
   powerups: health becomes shields, armour and cells become energy, and Doom
   weapons become Descent weapons.
@@ -233,6 +234,10 @@ The same Pyro-GX flies through the other games GZDoom runs:
   cannon. Blue mana is energy and green mana vulcan ammo; flechettes and
   banishment devices supply concussion and homing missiles.
 
+Ick Mode, Descent music and Descent II mode work in all of them. In Descent
+II mode Heretic's and Hexen's torch is the headlight, Heretic's map scroll
+the full map, and Hexen's boots of speed the afterburner.
+
 In Heretic and Hexen, artifacts you carry and use (time bombs, morph ovums,
 the chaos device, Hexen's puzzle items...) work as in the original: browse
 them with `[` and `]` and use one with Enter. The selected one shows at the
@@ -244,13 +249,15 @@ Strife isn't supported.
 ## Repository layout
 
 ```
-mod/              the GZDoom mod (ZScript, menus, key setup) -> doomscent.pk3
-tools/ddconvert.py  converts DESCENT.HOG/PIG into dd_descent_assets.pk3
-tools/build_pk3.py  zips mod/ into doomscent.pk3
-tools/launcher.ps1  the Windows launcher (run by Doomscent.bat)
-tools/make_release.py  builds the release zip (used by .github/workflows)
-Doomscent.bat, doomscent.sh   launchers
-data/             where you put your WADs and Descent files (git-ignored)
+mod/                  the GZDoom mod (ZScript, menus, key setup) -> doomscent.pk3
+tools/ddconvert.py    converts your Descent (or, with --descent2, Descent II)
+                      files into dd_descent_assets.pk3 / dd_descent2_assets.pk3
+tools/ickface.png     Ick Mode's face
+tools/build_pk3.py    zips mod/ into doomscent.pk3
+tools/launcher.ps1    the Windows launcher (run by Doomscent.bat / Doomscent2.bat)
+tools/make_release.py builds the release zip (used by .github/workflows)
+Doomscent.bat, Doomscent2.bat, doomscent.sh   launchers
+data/                 where you put your WADs and Descent files (git-ignored)
 ```
 
 ## Licence

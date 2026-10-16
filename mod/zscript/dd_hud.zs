@@ -87,10 +87,8 @@ class DDStatusBar : BaseStatusBar
 	}
 
 	//----------------------------------------------------------------------
-	// Descent's HUD message line.  Our own messages (pickups, weapon
-	// selection) and everything GZDoom would print in the top-left corner
-	// (locked doors, other games' pickups, obituaries...) go here: up to
-	// three lines at the top centre, each shown for three seconds.
+	// Descent's HUD message line: our messages and everything GZDoom would
+	// print top-left, up to three lines, three seconds each.
 
 	const MSG_LINES = 3;
 	const MSG_TICS = 105;
@@ -391,8 +389,7 @@ class DDStatusBar : BaseStatusBar
 		}
 		if (primary == DD.PW_LASER || primary == DD.PW_SUPERLASER)
 		{
-			int lvl = DDShip.PrimaryWeaponId(primary, ship.laserLevel);
-			lvl = lvl >= 30 ? lvl - 25 : lvl + 1;
+			int lvl = LaserLevel(ship, primary);
 			double ly = primary == DD.PW_SUPERLASER ? 169 : 163;
 			Txt(String.Format("%s: %d", StringTable.Localize("$DD_LVL"), lvl), 87, ly, green);
 			if (ship.quadLasers) Txt(StringTable.Localize("$DD_QUAD"), 87, ly + 6, green);
@@ -415,6 +412,13 @@ class DDStatusBar : BaseStatusBar
 		Txt(String.Format("%03d", ship.CountInv(DD.SecondaryAmmo(sec))), 213, 171, COL_AMMO);
 	}
 
+	// The level the selected laser fires at (1-4, super laser 5-6).
+	static int LaserLevel(DDShip ship, int primary)
+	{
+		int id = DDShip.PrimaryWeaponId(primary, ship.laserLevel);
+		return id >= 30 ? id - 25 : id + 1;
+	}
+
 	// Without the cockpit: Descent's full-screen HUD readouts.
 	void DrawMinimal(DDShip ship, bool showText)
 	{
@@ -430,8 +434,7 @@ class DDStatusBar : BaseStatusBar
 		String p = DD.PrimaryName(primary);
 		if (primary == DD.PW_LASER || primary == DD.PW_SUPERLASER)
 		{
-			int lvl = DDShip.PrimaryWeaponId(primary, ship.laserLevel);
-			lvl = lvl >= 30 ? lvl - 25 : lvl + 1;
+			int lvl = LaserLevel(ship, primary);
 			p = String.Format("%s %s %d%s", p, StringTable.Localize("$DD_LVL"), lvl,
 				ship.quadLasers ? " " .. StringTable.Localize("$DD_QUAD") : "");
 		}

@@ -246,12 +246,16 @@ class DDProjectile : Actor
 //--------------------------------------------------------------------------
 // Primary weapons
 
+// Lasers and the fusion bolt have a bright inner model.  Descent drew it
+// after the outer one with no depth buffer, so the core showed through;
+// additive rendering gives the same glowing bolt.
 class DDLaserBolt1 : DDProjectile
 {
 	Default
 	{
 		Radius 3;
 		Height 6;
+		RenderStyle "Add";
 	}
 
 	override void PostBeginPlay()
@@ -362,6 +366,7 @@ class DDFusionBolt : DDProjectile
 	{
 		Radius 6;
 		Height 12;
+		RenderStyle "Add";
 		+RIPPER
 	}
 
@@ -462,15 +467,26 @@ class DDSmartMissile : DDMissile
 {
 	override void OnImpact()
 	{
-		// create_smart_children(): up to six blobs aimed at nearby enemies.
+		DDSmartChildren.Spawn(self, target, 'DDSmartBlob', 19);
+	}
+}
+
+// create_smart_children(): the six homing children the smart missile, smart
+// mine and earthshaker release, aimed at enemies in sight.
+class DDSmartChildren abstract play
+{
+	static void Spawn(Actor from, Actor owner, class<DDProjectile> cls, int weaponId)
+	{
 		Array<Actor> targets;
-		let it = BlockThingsIterator.Create(self, 150 * DD.SCALE);
+		let it = BlockThingsIterator.Create(from, 150 * DD.SCALE);
 		while (it.Next())
 		{
 			let a = it.thing;
-			if (a.bIsMonster && !a.bFriendly && a.health > 0 && a.bShootable && Distance3D(a) < 150 * DD.SCALE && CheckSight(a))
+			if (a.bIsMonster && !a.bFriendly && a.health > 0 && a.bShootable && from.Distance3D(a) < 150 * DD.SCALE && from.CheckSight(a))
 				targets.Push(a);
 		}
+		DDWeaponStats s;
+		DDWeaponTable.Get(weaponId, s);
 		for (int i = 0; i < 6; i++)
 		{
 			Vector3 dir;
@@ -478,7 +494,7 @@ class DDSmartMissile : DDMissile
 			if (targets.Size() > 0)
 			{
 				goal = targets[random(0, targets.Size() - 1)];
-				dir = (Vec3To(goal) + (0, 0, goal.Height / 2)).Unit();
+				dir = (from.Vec3To(goal) + (0, 0, goal.Height / 2)).Unit();
 			}
 			else
 			{
@@ -486,17 +502,15 @@ class DDSmartMissile : DDMissile
 				if (dir.Length() < 0.01) dir = (1, 0, 0);
 				dir = dir.Unit();
 			}
-			let blob = DDSmartBlob(Spawn('DDSmartBlob', pos, ALLOW_REPLACE));
-			if (blob == null) continue;
-			DDWeaponStats s;
-			DDWeaponTable.Get(19, s);
-			blob.target = target;
-			blob.weaponId = 19;
-			blob.multiplier = 1;
-			blob.InitStats(s);
-			blob.trackGoal = goal;
-			blob.Vel = dir * (s.speed * DD.SCALE / 4) / TICRATE;
-			blob.FaceDirection(dir);
+			let child = DDProjectile(Actor.Spawn(cls, from.pos, ALLOW_REPLACE));
+			if (child == null) continue;
+			child.target = owner;
+			child.weaponId = weaponId;
+			child.multiplier = 1;
+			child.InitStats(s);
+			child.trackGoal = goal;
+			child.Vel = dir * (s.speed * DD.SCALE / 4) / TICRATE;
+			child.FaceDirection(dir);
 		}
 	}
 }

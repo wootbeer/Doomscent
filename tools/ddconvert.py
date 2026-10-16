@@ -21,7 +21,6 @@ non-commercial licence.
 """
 
 import argparse
-import io
 import math
 import os
 import struct
@@ -348,7 +347,6 @@ class GameData:
 BM_FLAG_RLE_BIG = 32
 
 D2_SIZE_TMAP_INFO = 20
-D2_SIZE_ECLIP = 130
 D2_SIZE_WCLIP = 126
 D2_SIZE_ROBOT_INFO = 480
 D2_WEAPON_FMT = '<bbhh' + 'bbh' + 'bbh' + 'bbh' + 'bbbb' + 'BBbbb' + 'iii' + 'H' + 'iii' + '5i5i' + '7i' + 'HH'
@@ -469,7 +467,7 @@ class GameData2:
         self.vclips += [(0, 0, (), 0)] * max(0, 120 - n)
         self.vclip_sounds += [-1] * max(0, 120 - n)
         n = i32()
-        o += n * D2_SIZE_ECLIP
+        o += n * SIZE_ECLIP
         n = i32()
         o += n * D2_SIZE_WCLIP
         n = i32()
@@ -765,7 +763,7 @@ class Converter:
 
     # -- images ------------------------------------------------------------
 
-    def rgba(self, index, keep_black=False, transparent=False):
+    def rgba(self, index, transparent=False):
         w, h, flags, px = self.pig.pixels(index)
         out = bytearray(w * h * 4)
         transparent = transparent or flags & (BM_FLAG_TRANSPARENT | BM_FLAG_SUPER_TRANSPARENT)
