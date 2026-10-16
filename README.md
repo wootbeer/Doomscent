@@ -148,19 +148,6 @@ The **Doomscent Options** menu also has:
 - the cockpit on or off;
 - Descent's music instead of the game's (each level plays one of Descent's
   songs in turn, as Descent did);
-- Ick Mode (below).
-
-### Ick Mode
-
-Turn on **Ick Mode** in the Doomscent Options and every monster wears the
-same face, scaled to the monster (big face for a Cyberdemon, wide face for
-the Spider Mastermind). The faces turn to show their sides and the back of
-the head as monsters walk around. Monsters bleed green, and when they die
-they warp out like a Descent ship instead of leaving a corpse.
-
-To use a different face, put a PNG named `ickface.png` (a head on a
-transparent background works best) in the `data` folder. The launcher picks
-it up on the next start.
 
 ## How Doom's items map to Descent
 
