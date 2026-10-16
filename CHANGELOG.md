@@ -1,3 +1,26 @@
+# Doomscent 0.4.0
+
+- Descent II mode (`Doomscent2.bat`, or `-descent2`; Descent 1 stays the
+  default): converts your DESCENT2.HOG/HAM, GROUPA.PIG and DESCENT2.S22 and
+  adds Descent II's high-resolution cockpit, sounds and music, its weapons
+  (super laser, gauss, helix, phoenix and omega cannons; flash, guided,
+  smart mine, mercury and earthshaker missiles) and equipment (afterburner,
+  headlight, energy-to-shield converter, ammo rack, full map). Works in
+  Doom, Chex Quest, Heretic and Hexen
+- Descent music option (Options → Doomscent Options → Descent music): each
+  level plays one of Descent's songs, as in Descent
+- Ick Mode (Options → Doomscent Options): every monster wears a face
+  (`tools/ickface.png`, or your own `data/ickface.png`) sized to the
+  monster, with side and back views as it turns; monsters bleed green and
+  warp out instead of leaving corpses
+- Damage taken slider (Options → Doomscent Options): scales the damage that
+  hits the ship; 1.0 (the default) is Doom's own damage
+- Lasers and the fusion bolt glow with their bright core showing, as in
+  Descent
+- Powerups float just above the floor instead of dipping into it
+- The launchers reconvert the Descent data when the converter or
+  `data/ickface.png` changes
+
 # Doomscent 0.3.0
 
 - Rear view (V): tap to toggle, hold to look back only while held, with

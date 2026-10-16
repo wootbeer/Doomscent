@@ -7,6 +7,10 @@
 *.PIG
 *.ham
 *.HAM
+*.s11
+*.S11
+*.s22
+*.S22
 
 # Built / generated archives (the asset pack contains Descent data).
 *.pk3
@@ -26,3 +30,7 @@ __pycache__/
 *.pyc
 .DS_Store
 Thumbs.db
+
+# Everything players put in data/ (game files, an Ick Mode face...).
+data/*
+!data/README.txt

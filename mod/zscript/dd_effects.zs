@@ -34,6 +34,21 @@ class DDVclip abstract
 			case 58: return 17, 0.052;
 			case 59: return 5, 0.1;
 			case 60: return 11, 0.079;
+			case 61: return 12, 0.067;
+			// Descent II
+			case 68: return 3, 0.5;
+			case 80: return 5, 0.15;
+			case 85: return 3, 0.1;
+			case 86: return 3, 0.1;
+			case 87: return 5, 0.1;
+			case 88: return 5, 0.1;
+			case 92: return 6, 0.05;
+			case 95: return 5, 0.08;
+			case 98: return 3, 0.5;
+			case 103: return 3, 0.167;
+			case 104: return 13, 0.062;
+			case 105: return 5, 0.08;
+			case 106: return 7, 0.086;
 			case 63: return 13, 0.038;
 			case 64: return 5, 0.1;
 			case 65: return 10, 0.04;
@@ -41,10 +56,17 @@ class DDVclip abstract
 		return 0, 0.1;
 	}
 
+	// DX00..DX99, then DY00 for vclip 100 (Descent II has more).
+	static clearscope String SpriteName(int vclip)
+	{
+		if (vclip < 100) return String.Format("DX%02d", vclip);
+		return String.Format("DY%02d", vclip - 100);
+	}
+
 	// Scale that makes the vclip's first frame 'diameter' map units wide.
 	static double ScaleFor(int vclip, double diameter)
 	{
-		TextureID tex = TexMan.CheckForTexture(String.Format("DX%02dA0", vclip), TexMan.Type_Sprite);
+		TextureID tex = TexMan.CheckForTexture(DDVclip.SpriteName(vclip) .. "A0", TexMan.Type_Sprite);
 		if (!tex.IsValid()) return 1;
 		int w, h;
 		[w, h] = TexMan.GetSize(tex);
@@ -93,7 +115,7 @@ class DDEffect : Actor
 			Destroy();
 			return;
 		}
-		sprite = GetSpriteIndex(String.Format("DX%02d", vc));
+		sprite = GetSpriteIndex(DDVclip.SpriteName(vc));
 		frame = 0;
 		double s = DDVclip.ScaleFor(vc, size * 2);
 		Scale = (s, s);
@@ -157,9 +179,23 @@ class DDSpriteNames : Actor abstract
 		DX58 A 0;
 		DX59 A 0;
 		DX60 A 0;
+		DX61 A 0;
 		DX63 A 0;
 		DX64 A 0;
 		DX65 A 0;
+		DX68 A 0;
+		DX80 A 0;
+		DX85 A 0;
+		DX86 A 0;
+		DX87 A 0;
+		DX88 A 0;
+		DX92 A 0;
+		DX95 A 0;
+		DX98 A 0;
+		DY03 A 0;
+		DY04 A 0;
+		DY05 A 0;
+		DY06 A 0;
 		Stop;
 	}
 }

@@ -118,33 +118,34 @@ class DDVulcanAmmo : Ammo
 	{
 		Tag "$DD_VULCANAMMO";
 		Inventory.MaxAmount DD.VULCAN_AMMO_MAX;
-		Ammo.BackpackMaxAmount DD.VULCAN_AMMO_MAX;
+		Ammo.BackpackMaxAmount DD.VULCAN_AMMO_MAX * 2;     // Descent II's ammo rack
 		Inventory.Icon "TNT1A0";
 		+INVENTORY.IGNORESKILL
 	}
 }
 
 // Each missile type derives straight from Ammo: GZDoom treats a subclass
-// of an ammo type as a pickup for its parent.
+// of an ammo type as a pickup for its parent.  BackpackMaxAmount is what
+// Descent II's ammo rack raises them to (DDAmmoRack, only in that mode).
 class DDConcussionAmmo : Ammo
 {
-	Default { Tag "$DD_CONCUSSION"; Inventory.MaxAmount 20; Ammo.BackpackMaxAmount 20; Inventory.Icon "TNT1A0"; +INVENTORY.IGNORESKILL }
+	Default { Tag "$DD_CONCUSSION"; Inventory.MaxAmount 20; Ammo.BackpackMaxAmount 40; Inventory.Icon "TNT1A0"; +INVENTORY.IGNORESKILL }
 }
 class DDHomingAmmo : Ammo
 {
-	Default { Tag "$DD_HOMING"; Inventory.MaxAmount 10; Ammo.BackpackMaxAmount 10; Inventory.Icon "TNT1A0"; +INVENTORY.IGNORESKILL }
+	Default { Tag "$DD_HOMING"; Inventory.MaxAmount 10; Ammo.BackpackMaxAmount 20; Inventory.Icon "TNT1A0"; +INVENTORY.IGNORESKILL }
 }
 class DDProximityAmmo : Ammo
 {
-	Default { Tag "$DD_PROXIMITY"; Inventory.MaxAmount 10; Ammo.BackpackMaxAmount 10; Inventory.Icon "TNT1A0"; +INVENTORY.IGNORESKILL }
+	Default { Tag "$DD_PROXIMITY"; Inventory.MaxAmount 10; Ammo.BackpackMaxAmount 20; Inventory.Icon "TNT1A0"; +INVENTORY.IGNORESKILL }
 }
 class DDSmartAmmo : Ammo
 {
-	Default { Tag "$DD_SMART"; Inventory.MaxAmount 5; Ammo.BackpackMaxAmount 5; Inventory.Icon "TNT1A0"; +INVENTORY.IGNORESKILL }
+	Default { Tag "$DD_SMART"; Inventory.MaxAmount 5; Ammo.BackpackMaxAmount 10; Inventory.Icon "TNT1A0"; +INVENTORY.IGNORESKILL }
 }
 class DDMegaAmmo : Ammo
 {
-	Default { Tag "$DD_MEGA"; Inventory.MaxAmount 5; Ammo.BackpackMaxAmount 5; Inventory.Icon "TNT1A0"; +INVENTORY.IGNORESKILL }
+	Default { Tag "$DD_MEGA"; Inventory.MaxAmount 5; Ammo.BackpackMaxAmount 10; Inventory.Icon "TNT1A0"; +INVENTORY.IGNORESKILL }
 }
 
 //--------------------------------------------------------------------------
@@ -174,10 +175,27 @@ class DDPowerup : CustomInventory
 	override void PostBeginPlay()
 	{
 		Super.PostBeginPlay();
-		// Lift off the floor so the ship can fly into it.
-		if (pos.z <= floorz + 1)
-			SetZ(min(floorz + 12, ceilingz - Height));
 		SetSpriteScale();
+		// Float so the centred sprite just touches the floor at the bottom
+		// of its bob, and stays clear of the ceiling at the top.
+		if (pos.z <= floorz + 1)
+		{
+			double half = SpriteHalfHeight();
+			double bob = 8 * FloatBobStrength;
+			double z = floorz + half + bob - 1;
+			double top = ceilingz - half - bob;
+			SetZ(max(min(z, top), floorz));
+		}
+	}
+
+	double SpriteHalfHeight()
+	{
+		if (sprite == 0) return Height / 2;
+		TextureID tex = CurState.GetSpriteTexture(0);
+		if (!tex.IsValid()) return Height / 2;
+		int w, h;
+		[w, h] = TexMan.GetSize(tex);
+		return h * abs(Scale.Y) / 2;
 	}
 
 	void SetSpriteScale()
@@ -390,6 +408,22 @@ class DDMegaSphere : DDShieldMega
 	}
 }
 
+// Descent II mode's megasphere: an earthshaker missile comes with it.
+class DDD2MegaSphere : DDMegaSphere
+{
+	States
+	{
+	Pickup:
+		TNT1 A 0
+		{
+			GiveBody(invoker.shields, DD.MAX_SHIELDS);
+			GiveInventory('DDEnergy', invoker.energy);
+			GiveInventory('DDEarthshakerAmmo', 1);
+		}
+		Stop;
+	}
+}
+
 class DDLaserUpgrade : DDPowerup
 {
 	Default
@@ -498,7 +532,7 @@ class DDWeaponPowerup : DDPowerup
 		if (toucher.FindInventory(weaponType))
 		{
 			// Already have it: Descent gives energy (or vulcan ammo) instead.
-			if (weaponType == 'DDVulcanCannon')
+			if (weaponType == 'DDVulcanCannon' || weaponType == 'DDGaussCannon')
 			{
 				if (toucher.CountInv('DDVulcanAmmo') >= DD.VULCAN_AMMO_MAX) return false;
 				toucher.GiveInventory('DDVulcanAmmo', 196);
@@ -558,7 +592,7 @@ class DDAmmoPowerup : DDPowerup
 	bool GiveAmmo(Actor toucher)
 	{
 		let inv = toucher.FindInventory(ammoType);
-		int maxAmt = GetDefaultByType(ammoType).MaxAmount;
+		int maxAmt = inv ? inv.MaxAmount : GetDefaultByType(ammoType).MaxAmount;
 		if (inv && inv.Amount >= maxAmt) return false;
 		bool hadNone = toucher.CountInv(ammoType) == 0;
 		toucher.GiveInventory(ammoType, amount);
@@ -649,6 +683,16 @@ class DDBackpack : DDPowerup
 			GiveInventory('DDHomingAmmo', 2);
 			GiveInventory('DDProximityAmmo', 4);
 			GiveInventory('DDEnergy', 25);
+			// Descent II mode: Doom's backpack also does what Descent II's
+			// ammo rack does (double capacity), and brings smart mines and
+			// the energy-to-shield converter.
+			if (DD.IsD2())
+			{
+				GiveInventory('DDAmmoRack', 1);
+				GiveInventory('DDSmartMineAmmo', 2);
+				let ship = DDShip(self);
+				if (ship) ship.hasConverter = true;
+			}
 		}
 		Stop;
 	}

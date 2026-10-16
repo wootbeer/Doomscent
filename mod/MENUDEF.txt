@@ -18,8 +18,12 @@ OptionMenu "DDOptions"
 	StaticText ""
 	StaticText "Game"
 	Slider "Weapon damage", "dd_damage", 0.25, 4.0, 0.25, 2
+	Slider "Damage taken", "dd_damagetaken", 0.1, 4.0, 0.1, 1
 	Option "Open doors by flying into them", "dd_bumpuse", "OnOff"
 	Option "Cockpit", "dd_cockpit", "OnOff"
+	Option "Descent music", "dd_music", "OnOff"
+	StaticText ""
+	Option "Ick Mode", "dd_ickmode", "OnOff"
 	StaticText ""
 	SafeCommand "Bind Descent-style keys", "dd_bindkeys", "Replace your key bindings with the Doomscent layout?"
 	StaticText ""

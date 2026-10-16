@@ -9,15 +9,65 @@ class DDEventHandler : EventHandler
 		// Large Zorcher is a Shotgun, its glass of water a HealthBonus...)
 		// get the same replacements.  The class itself is checked first, so
 		// ClipBox matches before its parent Clip.
+		bool d2 = DD.IsD2();
 		for (class<Actor> cls = e.Replacee; cls != null; cls = (class<Actor>)(cls.GetParentClass()))
 		{
-			Name rep = DoomReplacement(cls.GetClassName());
+			Name rep = d2 ? D2Replacement(cls.GetClassName()) : 'None';
+			if (rep == 'None')
+				rep = DoomReplacement(cls.GetClassName());
 			if (rep != 'None')
 			{
 				e.Replacement = rep;
 				return;
 			}
 		}
+	}
+
+	// Descent II mode: half of the weapon and missile pickups become their
+	// Descent II counterparts, and Doom's other powerups become Descent
+	// II's equipment.  Anything not listed falls back to DoomReplacement.
+	static Name D2Replacement(Name cls)
+	{
+		bool d2 = random(0, 1) == 1;
+		switch (cls)
+		{
+			// Weapons
+			case 'Shotgun': case 'Crossbow': case 'FWeapAxe': case 'CWeapStaff': case 'MWeapFrost':
+				return d2 ? 'DDHelixPowerup' : 'DDSpreadfirePowerup';
+			case 'SuperShotgun':
+				return d2 ? 'DDSuperLaserPowerup' : 'DDQuadLasers';
+			case 'Chaingun': case 'Blaster':
+				return d2 ? 'DDGaussPowerup' : 'DDVulcanPowerup';
+			case 'RocketLauncher': case 'PhoenixRod':
+				return d2 ? 'DDMercury4' : 'DDSmartPowerup';
+			case 'PlasmaRifle': case 'SkullRod': case 'FWeapHammer': case 'CWeapFlame': case 'MWeapLightning':
+				return d2 ? 'DDPhoenixPowerup' : 'DDPlasmaPowerup';
+			case 'BFG9000': case 'Mace':
+				return d2 ? 'DDOmegaPowerup' : 'DDFusionPowerup';
+			case 'Berserk':
+				return 'DDSuperBerserk';
+
+			// Missiles
+			case 'Shell': case 'CrossbowAmmo': case 'ArtiPoisonBag':
+				return d2 ? 'DDFlash1' : 'DDConcussion1';
+			case 'ShellBox': case 'CrossbowHefty':
+				return d2 ? 'DDFlash4' : 'DDConcussion4';
+			case 'RocketAmmo': case 'PhoenixRodAmmo': case 'ArtiTeleportOther':
+				return d2 ? 'DDGuided1' : 'DDHoming1';
+			case 'RocketBox': case 'PhoenixRodHefty':
+				return d2 ? 'DDGuided4' : 'DDHoming4';
+
+			// Equipment
+			case 'RadSuit': case 'ArtiSpeedBoots':
+				return 'DDAfterburnerPowerup';
+			case 'Infrared': case 'ArtiTorch':
+				return 'DDHeadlightPowerup';
+			case 'Allmap': case 'SuperMap':
+				return 'DDFullMapPowerup';
+			case 'Megasphere':
+				return 'DDD2MegaSphere';
+		}
+		return 'None';
 	}
 
 	static Name DoomReplacement(Name cls)
@@ -149,7 +199,19 @@ class DDEventHandler : EventHandler
 
 		if (e.Name == 'dd_secondary')
 		{
-			ship.SelectSecondary(e.Args[0]);
+			ship.SecondaryKey(e.Args[0]);
+		}
+		else if (e.Name == 'dd_afterburner')
+		{
+			ship.afterburnerHeld = e.Args[0] != 0;
+		}
+		else if (e.Name == 'dd_headlight')
+		{
+			ship.ToggleHeadlight();
+		}
+		else if (e.Name == 'dd_convert')
+		{
+			ship.ConvertKey(e.Args[0] != 0);
 		}
 		else if (e.Name == 'dd_nextsecondary')
 		{
@@ -181,8 +243,50 @@ class DDEventHandler : EventHandler
 		}
 	}
 
+	// Ick Mode: give monsters their faces, and say so when it's turned on.
+	bool ickStarted, ickWas;
+
+	override void WorldThingSpawned(WorldEvent e)
+	{
+		if (dd_ickmode && DDIckFace.Wanted(e.thing))
+			DDIckFace.Attach(e.thing);
+	}
+
+	override void WorldThingRevived(WorldEvent e)
+	{
+		if (dd_ickmode && DDIckFace.Wanted(e.thing))
+			DDIckFace.Attach(e.thing);
+	}
+
+	void CheckIckMode()
+	{
+		bool on = dd_ickmode;
+		if (!ickStarted)
+		{
+			ickStarted = true;
+			ickWas = on;
+			return;
+		}
+		if (on == ickWas) return;
+		ickWas = on;
+		if (!on) return;
+		let it = ThinkerIterator.Create('Actor', Thinker.STAT_DEFAULT);
+		Actor mo;
+		while (mo = Actor(it.Next()))
+		{
+			if (DDIckFace.Wanted(mo) && mo.FindInventory('DDIckToken') == null)
+				DDIckFace.Attach(mo);
+		}
+		for (int i = 0; i < MAXPLAYERS; i++)
+		{
+			let ship = playeringame[i] ? DDShip(players[i].mo) : null;
+			if (ship) ship.ShowMessage(StringTable.Localize("$DD_ICKON"));
+		}
+	}
+
 	override void WorldTick()
 	{
+		CheckIckMode();
 		// Light the homing warning when a homing missile is chasing a ship.
 		if (Level.maptime % 4) return;
 		let it = ThinkerIterator.Create('Actor', Thinker.STAT_DEFAULT);

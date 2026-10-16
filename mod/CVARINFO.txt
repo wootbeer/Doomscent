@@ -18,6 +18,9 @@ user bool dd_shipbob = true;
 // Slowly roll the ship back level when not banking.
 user bool dd_autolevel = false;
 
+// Play Descent's music instead of the game's own.
+user bool dd_music = false;
+
 // Draw the Descent cockpit (off = full-screen HUD with reticle only).
 user bool dd_cockpit = true;
 
@@ -26,6 +29,13 @@ server float dd_thrust = 1.0;
 
 // Damage multiplier for Descent weapons against Doom monsters.
 server float dd_damage = 1.0;
+
+// Damage multiplier for what hits the ship.  1.0 is Doom's own damage.
+server float dd_damagetaken = 1.0;
+
+// Ick Mode: monsters wear a face (data/ickface.png), bleed green and warp
+// out when they die.
+server bool dd_ickmode = false;
 
 // Open doors and press switches by flying into them.
 server bool dd_bumpuse = true;
