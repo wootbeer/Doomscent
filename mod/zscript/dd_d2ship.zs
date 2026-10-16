@@ -35,6 +35,7 @@ extend class DDShip
 			ConvertEnergy();
 
 		OmegaRecharge();
+		if (GameTime() - lastOmegaTime > 2 * DD.TIC) StopOmegaSound();
 	}
 
 	//----------------------------------------------------------------------
@@ -162,21 +163,40 @@ extend class DDShip
 		UseEnergy(min(cost, Energy()));
 	}
 
+	bool omegaSoundOn;
+	int omegaTics;
+
+	void StopOmegaSound()
+	{
+		if (omegaSoundOn)
+		{
+			A_StopSound(CHAN_5);
+			omegaSoundOn = false;
+		}
+	}
+
 	void HandleOmega(bool held, double now)
 	{
-		if (!held) return;
+		if (!held)
+		{
+			StopOmegaSound();
+			return;
+		}
 		if (!(omegaCharge >= 1. / 8 || (omegaCharge > 0 && Energy() <= 0)))
 		{
+			StopOmegaSound();
 			if (omegaCharge <= 0 && Energy() <= 0) AutoSelectPrimary();
 			return;
 		}
 		omegaCharge = max(omegaCharge - DD.TIC, 0);
 		lastOmegaTime = now;
 		primaryReadyTime = now;
+		omegaTics++;
 
 		DDWeaponStats s;
 		DDWeaponTable.Get(35, s);
-		Vector3 start = pos + (0, 0, Height / 2) + DD.LocalToWorld(GunPoint(1) * DD.SCALE, fwd, rgt, up);
+		Vector3 gunOfs = DD.LocalToWorld(GunPoint(1) * DD.SCALE, fwd, rgt, up);
+		Vector3 start = pos + (0, 0, Height / 2) + gunOfs;
 
 		// find_homing_object with the omega's narrow cone.
 		Actor best = null;
@@ -198,41 +218,122 @@ extend class DDShip
 		}
 
 		Vector3 goal;
+		bool hitSomething = true;
 		if (best)
 		{
 			goal = best.pos + (0, 0, best.Height / 2);
-			int dmg = int(round(max(s.strength * CVar.GetCVar('dd_damage').GetFloat(), 1)));
-			best.DamageMobj(self, self, dmg, 'Omega');
-			if (random(0, 3) == 0)
-				DDEffect.Make(goal, s.robotHitVclip, s.impactSize * DD.SCALE / 2);
+			// OMEGA_DAMAGE_SCALE (32) x FrameTime x strength: 32 x 7 a second.
+			omegaDamage += 32 * DD.TIC * s.strength * CVar.GetCVar('dd_damage').GetFloat();
+			int dmg = int(omegaDamage);
+			if (dmg > 0)
+			{
+				omegaDamage -= dmg;
+				best.DamageMobj(self, self, dmg, 'Omega');
+			}
 		}
 		else
 		{
-			// Nothing to lock onto: crackle straight ahead to a wall.
-			Vector3 dir = (fwd + (frandom(-1, 1), frandom(-1, 1), frandom(-1, 1)) / 16).Unit();
+			// Nothing to lock onto: crackle straight ahead, slightly
+			// perturbed, up to a wall or the omega's reach.
+			Vector3 dir = (fwd + RandomUnit() / 16).Unit();
 			double a, p;
 			[a, p] = DD.VectorAngles(dir);
 			FLineTraceData t;
 			double dist = OMEGA_RANGE;
-			if (LineTrace(a, OMEGA_RANGE, p, TRF_THRUACTORS, Height / 2, 0, 0, t))
+			hitSomething = false;
+			if (LineTrace(a, OMEGA_RANGE, p, TRF_THRUACTORS, Height / 2 + gunOfs.z, 0, 0, t) && t.HitType != TRACE_HitNone)
+			{
 				dist = t.Distance;
+				hitSomething = true;
+			}
 			goal = start + dir * dist;
 		}
 
-		// The bolt: sprites every 5 Descent units, jittered.
-		Vector3 d = goal - start;
-		double len = d.Length();
-		int n = clamp(int(len / (5 * DD.SCALE)), 3, 16);
-		for (int i = 1; i <= n; i++)
+		DrawOmegaBolt(start, goal, s);
+
+		// The bolt's end crackles against whatever it hit, every frame as in
+		// Descent II, and the gun flashes.
+		if (hitSomething)
 		{
-			Vector3 p = start + d * (double(i) / n);
-			if (i < n) p += (frandom(-1, 1), frandom(-1, 1), frandom(-1, 1)) * DD.SCALE;
-			DDOmegaSpark.Make(p, s.blobSize * 2 * DD.SCALE);
+			DDEffect.Make(goal, best ? s.robotHitVclip : s.wallHitVclip, s.impactSize * DD.SCALE / 2);
+			if (best && (omegaTics & 3) == 0)
+				best.A_StartSound("ddsnd/11", CHAN_BODY, CHANF_OVERLAP);
 		}
-		if (now >= nextOmegaSound)
+		if ((omegaTics % 6) == 1)
+			SpawnMuzzleFlash(s, start);
+		if (!omegaSoundOn)
 		{
-			A_StartSound(String.Format("ddsnd/%d", s.flashSound), CHAN_WEAPON, CHANF_OVERLAP);
-			nextOmegaSound = now + 0.25;
+			// Descent II restarts the zap every frame; a loop is the same buzz.
+			A_StartSound(String.Format("ddsnd/%d", s.flashSound), CHAN_5, CHANF_LOOPING);
+			omegaSoundOn = true;
+		}
+	}
+	double omegaDamage;
+
+	static Vector3 RandomUnit()
+	{
+		Vector3 v;
+		do
+		{
+			v = (frandom(-1, 1), frandom(-1, 1), frandom(-1, 1));
+		} while (v.Length() > 1 || v.Length() < 0.01);
+		return v.Unit();
+	}
+
+	// create_omega_blobs(): blobs every 5 Descent units (3 when close, 3 to
+	// 16 of them), bowed out along a random direction that leans away from
+	// the ship's up, re-randomised every fourth blob.  The arc is redrawn
+	// every tic, so it crackles.
+	void DrawOmegaBolt(Vector3 start, Vector3 goal, DDWeaponStats s)
+	{
+		double sc = DD.SCALE;
+		Vector3 toGoal = goal - start;
+		double dist = toGoal.Length() / sc;          // Descent units
+		if (dist < 0.01) return;
+		Vector3 dir = toGoal.Unit();
+
+		int n;
+		double spacing;
+		if (dist < 3 * 3)
+		{
+			spacing = 3;
+			n = max(int(dist / spacing), 1);
+		}
+		else
+		{
+			spacing = 5;
+			n = int(dist / spacing);
+			if (n > 16) { n = 16; spacing = dist / n; }
+			else if (n < 3) { n = 3; spacing = dist / n; }
+		}
+		Vector3 delta = dir * spacing * sc;
+
+		double perturb[16];
+		for (int i = 0; i < 16; i++) perturb[i] = 0;
+		Vector3 blobPos = start;
+		if (dist >= 3 * 4)
+		{
+			blobPos += delta / 2;
+			for (int i = 0; i < n / 2; i++)
+			{
+				perturb[i] = i + 0.25;
+				perturb[n - 1 - i] = i;
+			}
+		}
+
+		Vector3 pv = RandomUnit() - up * 0.5;
+		Vector3 eye = (pos.xy, player.viewz);
+		double size = s.blobSize * 2 * sc;
+		for (int i = 0; i < n; i++)
+		{
+			if (i == n - 1) blobPos += delta * 15 / 32;
+			if ((i % 4) == 3) pv += RandomUnit() / 4;
+			Vector3 p = blobPos + pv * (perturb[i] * sc);
+			// Skip blobs right in front of the eye (the cockpit hides them
+			// in Descent II; without it they would fill the screen).
+			if (Level.IsPointInLevel(p) && (p - eye).Length() > 24)
+				DDOmegaSpark.Make(p, size, (i % 4) == 1 || i == n - 1);
+			blobPos += delta;
 		}
 	}
 
