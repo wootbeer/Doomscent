@@ -175,10 +175,29 @@ class DDPowerup : CustomInventory
 	override void PostBeginPlay()
 	{
 		Super.PostBeginPlay();
-		// Lift off the floor so the ship can fly into it.
-		if (pos.z <= floorz + 1)
-			SetZ(min(floorz + 12, ceilingz - Height));
 		SetSpriteScale();
+		// Lift off the floor so the ship can fly into it.  The sprite is
+		// centred on the item, so raise it by half its drawn height plus
+		// the bob, leaving it just touching the floor at the bottom of the
+		// bob (and clear of the ceiling at the top).
+		if (pos.z <= floorz + 1)
+		{
+			double half = SpriteHalfHeight();
+			double bob = 8 * FloatBobStrength;
+			double z = floorz + half + bob - 1;
+			double top = ceilingz - half - bob;
+			SetZ(max(min(z, top), floorz));
+		}
+	}
+
+	double SpriteHalfHeight()
+	{
+		if (sprite == 0) return Height / 2;
+		TextureID tex = CurState.GetSpriteTexture(0);
+		if (!tex.IsValid()) return Height / 2;
+		int w, h;
+		[w, h] = TexMan.GetSize(tex);
+		return h * abs(Scale.Y) / 2;
 	}
 
 	void SetSpriteScale()
