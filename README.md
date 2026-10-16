@@ -221,7 +221,7 @@ The same Pyro-GX flies through the other games GZDoom runs:
   cannon. Blue mana is energy and green mana vulcan ammo; flechettes and
   banishment devices supply concussion and homing missiles.
 
-Ick Mode, Descent music and Descent II mode work in all of them. In Descent
+Descent music and Descent II mode work in all of them. In Descent
 II mode Heretic's and Hexen's torch is the headlight, Heretic's map scroll
 the full map, and Hexen's boots of speed the afterburner.
 
@@ -239,7 +239,6 @@ Strife isn't supported.
 mod/                  the GZDoom mod (ZScript, menus, key setup) -> doomscent.pk3
 tools/ddconvert.py    converts your Descent (or, with --descent2, Descent II)
                       files into dd_descent_assets.pk3 / dd_descent2_assets.pk3
-tools/ickface.png     Ick Mode's face
 tools/build_pk3.py    zips mod/ into doomscent.pk3
 tools/launcher.ps1    the Windows launcher (run by Doomscent.bat / Doomscent2.bat)
 tools/make_release.py builds the release zip (used by .github/workflows)
