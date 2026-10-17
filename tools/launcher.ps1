@@ -67,7 +67,10 @@ function Save-ModList($mods) {
 
 function Get-GamesLabel($games) {
     if (-not $games) { return 'all games' }
-    return (($games -split ',') | ForEach-Object { (Get-Culture).TextInfo.ToTitleCase($_.Trim()) }) -join ', '
+    return (($games -split ',') | ForEach-Object {
+        $g = $_.Trim()
+        if ($g -eq 'chex') { 'Chex Quest' } else { (Get-Culture).TextInfo.ToTitleCase($g) }
+    }) -join ', '
 }
 
 # The game an IWAD is for.
@@ -83,7 +86,6 @@ if ($args -contains '-mods') {
     # Mods.bat: switch mods on and off, and choose their games.
     if (-not (Test-Path $ModsDir)) { New-Item -ItemType Directory $ModsDir | Out-Null }
     $mods = Read-ModList
-    $cycle = @('') + $GameNames
     while ($true) {
         Write-Host ""
         Write-Host "Doomscent mods (in $ModsDir), loaded top to bottom:"
@@ -96,8 +98,7 @@ if ($args -contains '-mods') {
         Write-Host ""
         Write-Host "  [x] = on, [ ] = off.  After the name: the games it loads for."
         Write-Host "  1, 2, 3...  switch that mod on or off"
-        Write-Host "  g1, g2...   change the games mod 1, 2... loads for (all games, Doom,"
-        Write-Host "              Heretic, Hexen, Chex Quest; each press moves to the next)"
+        Write-Host "  g1, g2...   choose the games mod 1, 2... loads for"
         Write-Host "  Enter       save and close"
         $answer = Read-Host "Choice"
         if ($answer -eq '') { exit 0 }
@@ -105,8 +106,20 @@ if ($args -contains '-mods') {
         if ($answer -match '^[gG]\s*(\d+)$') {
             $n = [int]$Matches[1]
             if ($n -ge 1 -and $n -le $mods.Count) {
-                $k = [array]::IndexOf($cycle, $mods[$n - 1].Games)
-                $mods[$n - 1].Games = $cycle[($k + 1) % $cycle.Count]
+                Write-Host ""
+                Write-Host "Which games should $($mods[$n - 1].Name) load for?"
+                Write-Host "   0. All games"
+                for ($i = 0; $i -lt $GameNames.Count; $i++) { Write-Host ("   {0}. {1}" -f ($i + 1), (Get-GamesLabel $GameNames[$i])) }
+                $pick = Read-Host "Number (or several, like 1,4)"
+                $games = @()
+                $ok = $pick -match '^[\d,\s]+$'
+                foreach ($p in ($pick -split '[,\s]+' | Where-Object { $_ -ne '' })) {
+                    $k = [int]$p
+                    if ($k -eq 0) { $games = @(); break }
+                    if ($k -gt $GameNames.Count) { $ok = $false; break }
+                    if ($games -notcontains $GameNames[$k - 1]) { $games += $GameNames[$k - 1] }
+                }
+                if ($ok) { $mods[$n - 1].Games = $games -join ',' }
             }
         }
         elseif ([int]::TryParse($answer, [ref]$n) -and $n -ge 1 -and $n -le $mods.Count) { $mods[$n - 1].On = -not $mods[$n - 1].On }

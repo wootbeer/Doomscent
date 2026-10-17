@@ -11,8 +11,8 @@ rem   [x] means on, [ ] means off; after the name are the games
 rem   the mod loads for.  Then type:
 rem
 rem   1, 2, 3...  switch that mod on or off
-rem   g1, g2...   change the games that mod loads for: each press moves to
-rem               the next of all games, Doom, Heretic, Hexen, Chex Quest
+rem   g1, g2...   choose the games that mod loads for: all games, or
+rem               any of Doom, Heretic, Hexen and Chex Quest
 rem               (Brutal Doom and most gameplay mods are Doom only)
 rem   Enter       save and close
 rem
