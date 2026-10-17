@@ -54,6 +54,16 @@ class DD abstract
 		return Wads.CheckNumForFullName("ddescent2.txt") >= 0;
 	}
 
+	static bool IsD2Item(class<Inventory> cls)
+	{
+		static const class<Inventory> items[] = { 'DDSuperLaserCannon', 'DDGaussCannon', 'DDHelixCannon',
+			'DDPhoenixCannon', 'DDOmegaCannon', 'DDFlashAmmo', 'DDGuidedAmmo', 'DDSmartMineAmmo',
+			'DDMercuryAmmo', 'DDEarthshakerAmmo', 'DDAmmoRack' };
+		for (int i = 0; i < items.Size(); i++)
+			if (cls == items[i]) return true;
+		return false;
+	}
+
 	// Descent's difficulty levels line up with Doom's five skills.
 	static int Difficulty()
 	{

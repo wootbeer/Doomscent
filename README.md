@@ -32,6 +32,8 @@ becomes Descent's ship:
   guided, smart mine, mercury and earthshaker missiles) and its equipment
   (afterburner, headlight, energy converter, ammo rack). See below.
 - **Descent's music** as an option, instead of the game's own.
+- **Descent's cheat codes** (`gabbagabbahey`, `racerx`, `almighty`...),
+  typed during play like Doom's, which still work too.
 - **Doors and switches** work when you fly into them, and switches can also
   be shot, as in Descent (a near miss counts). Exit switches only respond to
   shots from close by (about 200 units), so a stray shot can't end the level.
