@@ -68,10 +68,21 @@ if (-not (Test-Path $ModPk3)) { Fail "doomscent.pk3 is missing; re-download the 
 # --- Descent assets -----------------------------------------------------------
 # Descent 1 by default.  "-descent2" (Doomscent2.bat) plays in Descent II
 # mode, which uses its own asset pack; so does having only Descent II's files.
+# Other mods (the mods folder, or -file on the command line) load before
+# Doomscent so its ship, HUD and replacements win.
 $D2 = $false
 $GZArgs = @()
+$ModFiles = @()
+$inFile = $false
 foreach ($a in $args) {
-    if ($a -ieq '-descent2' -or $a -ieq '--descent2') { $D2 = $true } else { $GZArgs += $a }
+    if ($a -ieq '-descent2' -or $a -ieq '--descent2') { $D2 = $true; $inFile = $false }
+    elseif ($a -ieq '-file') { $inFile = $true }
+    elseif ($inFile -and -not ($a.StartsWith('-') -or $a.StartsWith('+'))) { $ModFiles += (Resolve-Path $a).Path }
+    else { $inFile = $false; $GZArgs += $a }
+}
+$ModsDir = Join-Path $Root 'mods'
+if (Test-Path $ModsDir) {
+    $ModFiles = @(Get-ChildItem $ModsDir | Sort-Object Name | ForEach-Object { $_.FullName }) + $ModFiles
 }
 $D1Files = (Test-Path (Join-Path $Data 'DESCENT.PIG')) -and (Test-Path (Join-Path $Data 'DESCENT.HOG'))
 $D2Files = (Test-Path (Join-Path $Data 'DESCENT2.HOG')) -and (Test-Path (Join-Path $Data 'DESCENT2.HAM')) -and
@@ -119,4 +130,4 @@ if (-not $iwads) {
 
 # Run from data\ so GZDoom finds the IWADs there and offers a choice.
 Set-Location $Data
-& $GZDoom -file $Assets $ModPk3 @GZArgs
+& $GZDoom -file @ModFiles $Assets $ModPk3 @GZArgs

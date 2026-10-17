@@ -1,5 +1,11 @@
 // Doomscent controls
 
+// The ship is the only player class.  Set here as well as in MAPINFO
+// because mods like Brutal Doom pick their player class in KEYCONF, which
+// GZDoom reads after MAPINFO; Doomscent's loads last, so this wins.
+clearplayerclasses
+addplayerclass DDShip
+
 addkeysection "Doomscent" DoomscentKeys
 
 addmenukey "Bank left" +user1
@@ -27,7 +33,7 @@ alias +dd_convert "netevent dd_convert 1"
 alias -dd_convert "netevent dd_convert 0"
 
 // Bind the Descent-style layout (from the options menu).
-alias dd_bindkeys "bind w +forward; bind s +back; bind a +moveleft; bind d +moveright; bind q +user1; bind e +user2; bind space +moveup; bind c +movedown; bind lctrl +movedown; bind r +use; bind f +user3; bind b +user4; bind mouse1 +attack; bind mouse2 +altattack; bind mwheelup weapprev; bind mwheeldown weapnext; bind mouse3 dd_nextsecondary; bind z dd_levelship; bind v +dd_rearview; bind lshift +dd_afterburner; bind h dd_headlight; bind g +dd_convert; bind 1 \"slot 1\"; bind 2 \"slot 2\"; bind 3 \"slot 3\"; bind 4 \"slot 4\"; bind 5 \"slot 5\"; bind 6 \"slot 6\"; bind 7 \"slot 7\"; bind 8 \"slot 8\"; bind 9 \"slot 9\"; bind 0 \"slot 0\"; freelook true; lookspring false; echo Doomscent controls bound."
+alias dd_bindkeys "bind w +forward; bind s +back; bind a +moveleft; bind d +moveright; bind q +user1; bind e +user2; bind space +moveup; bind c +movedown; bind ctrl +movedown; bind r +use; bind f +user3; bind b +user4; bind mouse1 +attack; bind mouse2 +altattack; bind mwheelup weapprev; bind mwheeldown weapnext; bind mouse3 dd_nextsecondary; bind z dd_levelship; bind v +dd_rearview; bind shift +dd_afterburner; bind h dd_headlight; bind g +dd_convert; bind 1 \"slot 1\"; bind 2 \"slot 2\"; bind 3 \"slot 3\"; bind 4 \"slot 4\"; bind 5 \"slot 5\"; bind 6 \"slot 6\"; bind 7 \"slot 7\"; bind 8 \"slot 8\"; bind 9 \"slot 9\"; bind 0 \"slot 0\"; freelook true; lookspring false; echo Doomscent controls bound."
 
 // Keys that are normally free in GZDoom's default layout.
 defaultbind q +user1

@@ -36,6 +36,7 @@ def main():
         'LICENSE': 'LICENSE',
         'CHANGELOG.md': 'CHANGELOG.md',
         'data/README.txt': 'data/README.txt',
+        'mods/README.txt': 'mods/README.txt',
         'tools/launcher.ps1': 'tools/launcher.ps1',
         'tools/ddconvert.py': 'tools/ddconvert.py',
         'tools/ickface.png': 'tools/ickface.png',

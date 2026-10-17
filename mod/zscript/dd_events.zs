@@ -12,15 +12,70 @@ class DDEventHandler : EventHandler
 		bool d2 = DD.IsD2();
 		for (class<Actor> cls = e.Replacee; cls != null; cls = (class<Actor>)(cls.GetParentClass()))
 		{
-			Name rep = d2 ? D2Replacement(cls.GetClassName()) : 'None';
-			if (rep == 'None')
-				rep = DoomReplacement(cls.GetClassName());
+			Name rep = Replacement(cls.GetClassName(), d2);
 			if (rep != 'None')
 			{
 				e.Replacement = rep;
 				return;
 			}
 		}
+		// Gameplay mods (Brutal Doom, Beautiful Doom...) drop pickups of
+		// their own that aren't based on the game's classes.
+		Name like = ModPickupEquivalent(e.Replacee);
+		if (like != 'None')
+			e.Replacement = Replacement(like, d2);
+	}
+
+	static Name Replacement(Name cls, bool d2)
+	{
+		Name rep = d2 ? D2Replacement(cls) : 'None';
+		return rep != 'None' ? rep : DoomReplacement(cls);
+	}
+
+	static bool Has(String s, String part) { return s.IndexOf(part) >= 0; }
+
+	// The Doom pickup a mod's own weapon, ammo, health or armour pickup
+	// stands for: weapons by slot (mods keep Doom's), ammo by its name.
+	static Name ModPickupEquivalent(class<Actor> cls)
+	{
+		String cname = cls.GetClassName();
+		if (cname.Left(2) == "DD") return 'None';
+		cname.ToLower();
+		if (cls is 'Weapon')
+		{
+			static const Name bySlot[] = { 'Pistol', 'Chainsaw', 'Clip', 'Shotgun', 'Chaingun', 'RocketLauncher', 'PlasmaRifle', 'BFG9000' };
+			let w = GetDefaultByType((class<Weapon>)(cls));
+			int slot = w.SlotNumber;
+			if (slot >= 1 && slot <= 7) return bySlot[slot];
+			// No slot of its own (the mod's player class assigns them): go
+			// by the name.
+			if (Has(cname, "bfg")) return 'BFG9000';
+			if (Has(cname, "plasma") || Has(cname, "rail")) return 'PlasmaRifle';
+			if (Has(cname, "rocket") || Has(cname, "launcher")) return 'RocketLauncher';
+			if (Has(cname, "shotgun") || Has(cname, "ssg")) return 'Shotgun';
+			if (Has(cname, "chaingun") || Has(cname, "minigun") || Has(cname, "rifle") || Has(cname, "dmr") || Has(cname, "smg"))
+				return 'Chaingun';
+			if (Has(cname, "saw")) return 'Chainsaw';
+			return 'Clip';
+		}
+		if (cls is 'Ammo')
+		{
+			bool big = Has(cname, "box") || Has(cname, "pack") || Has(cname, "big");
+			if (Has(cname, "shell")) return big ? 'ShellBox' : 'Shell';
+			if (Has(cname, "rocket") || Has(cname, "missile") || Has(cname, "grenade"))
+				return big ? 'RocketBox' : 'RocketAmmo';
+			if (Has(cname, "cell") || Has(cname, "plasma") || Has(cname, "energy"))
+				return big ? 'CellPack' : 'Cell';
+			return big ? 'ClipBox' : 'Clip';
+		}
+		if (cls is 'Health')
+		{
+			let h = GetDefaultByType((class<Inventory>)(cls));
+			return h.Amount >= 25 ? 'Medikit' : 'Stimpack';
+		}
+		if (cls is 'BasicArmorBonus') return 'ArmorBonus';
+		if (cls is 'BasicArmorPickup') return 'GreenArmor';
+		return 'None';
 	}
 
 	// Descent II mode: half of the weapon and missile pickups become their
@@ -250,6 +305,30 @@ class DDEventHandler : EventHandler
 	{
 		if (dd_ickmode && DDIckFace.Wanted(e.thing))
 			DDIckFace.Attach(e.thing);
+		// Some mods spawn their drops without going through replacement.
+		// Check them next tic: items given straight to someone have an owner
+		// by then and are left alone.
+		if (e.thing is 'Inventory' && ModPickupEquivalent(e.thing.GetClass()) != 'None')
+			loosePickups.Push(Inventory(e.thing));
+	}
+
+	Array<Inventory> loosePickups;
+
+	void ReplaceLoosePickups()
+	{
+		if (loosePickups.Size() == 0) return;
+		bool d2 = DD.IsD2();
+		for (int i = 0; i < loosePickups.Size(); i++)
+		{
+			let inv = loosePickups[i];
+			if (inv == null || inv.owner != null) continue;
+			Name rep = Replacement(ModPickupEquivalent(inv.GetClass()), d2);
+			if (rep == 'None') continue;
+			let mo = Actor.Spawn(rep, inv.pos, ALLOW_REPLACE);
+			if (mo) mo.Vel = inv.Vel;
+			inv.Destroy();
+		}
+		loosePickups.Clear();
 	}
 
 	override void WorldThingRevived(WorldEvent e)
@@ -286,6 +365,7 @@ class DDEventHandler : EventHandler
 
 	override void WorldTick()
 	{
+		ReplaceLoosePickups();
 		CheckIckMode();
 		// Light the homing warning when a homing missile is chasing a ship.
 		if (Level.maptime % 4) return;

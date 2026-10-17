@@ -1,3 +1,16 @@
+# Doomscent 0.4.1
+
+- Works with gameplay mods like Brutal Doom, Project Brutality and Beautiful
+  Doom: drop them in the new `mods` folder (or pass them with `-file`) and
+  the launcher loads them before Doomscent, so you fly the ship through
+  their monsters and gore. Their own weapons, ammo, health and armour
+  pickups become Descent powerups, and the ship ignores add-ons that would
+  fight its controls (other weapons, Tilt++ view tilting)
+- Mods that pick their player class in KEYCONF (like Brutal Doom) no longer
+  replace the ship
+- "Bind Descent-style keys" now really binds Ctrl (slide down) and Shift
+  (Descent II afterburner); the key names were wrong
+
 # Doomscent 0.4.0
 
 - Descent II mode (`Doomscent2.bat`, or `-descent2`; Descent 1 stays the

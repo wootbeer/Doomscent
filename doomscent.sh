@@ -26,6 +26,27 @@ if [ "$1" = "--descent2" ] || [ "$1" = "-descent2" ]; then
 	D2=1
 	shift
 fi
+
+# Other mods (the mods folder, or -file on the command line) load before
+# Doomscent so its ship, HUD and replacements win.
+set -- "$@" --end--
+MODS=""
+for f in "$ROOT"/mods/*; do
+	[ -e "$f" ] && MODS="$MODS
+$f"
+done
+INFILE=0
+for a in "$@"; do
+	shift
+	if [ "$a" = "--end--" ]; then break; fi
+	case "$a" in
+		-file) INFILE=1; continue ;;
+		-*|+*) INFILE=0 ;;
+		*) if [ $INFILE = 1 ]; then MODS="$MODS
+$(cd "$(dirname "$a")" && pwd)/$(basename "$a")"; continue; fi ;;
+	esac
+	set -- "$@" "$a"
+done
 has() { ls "$ROOT/data" 2>/dev/null | grep -qix "$1"; }
 if [ $D2 = 0 ] && ! has descent.pig && has descent2.hog; then
 	D2=1
@@ -55,4 +76,11 @@ fi
 
 # Run from data/ so GZDoom finds the IWADs there and offers a choice.
 cd "$ROOT/data"
-exec "$GZ" -file "$ASSETS" "$ROOT/doomscent.pk3" "$@"
+# Mod paths are newline-separated so they may contain spaces.
+OLDIFS=$IFS
+IFS='
+'
+# shellcheck disable=SC2086
+set -- -file $MODS "$ASSETS" "$ROOT/doomscent.pk3" "$@"
+IFS=$OLDIFS
+exec "$GZ" "$@"

@@ -1107,6 +1107,17 @@ class DDShip : PlayerPawn
 	//======================================================================
 	// Damage and death
 
+	// Weapons from other mods (scripts can hand them out) would fight our
+	// own weapon handling, so the ship only takes Doomscent's.
+	// Also refuse Tilt++ (in Project Brutality and others): it rewrites the
+	// player's roll every tic, which would undo the ship's.
+	override bool CanReceive(Inventory item)
+	{
+		if (item is 'Weapon' && !(item is 'DDPrimaryWeapon')) return false;
+		if (item.GetClassName() == 'Z_TiltMe') return false;
+		return Super.CanReceive(item);
+	}
+
 	override int DamageMobj(Actor inflictor, Actor source, int damage, Name mod, int flags, double angle)
 	{
 		// Damage-taken multiplier (telefrags and the like stay lethal).
