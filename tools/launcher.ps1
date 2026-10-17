@@ -93,8 +93,13 @@ if ($args -contains '-mods') {
         }
         Save-ModList $mods
         if ($mods.Count -eq 0) { exit 0 }
-        Write-Host "Type a number to switch that mod on/off, g and a number (g1) to change its game,"
-        $answer = Read-Host "or press Enter to finish"
+        Write-Host ""
+        Write-Host "  [x] = on, [ ] = off.  After the name: the games it loads for."
+        Write-Host "  1, 2, 3...  switch that mod on or off"
+        Write-Host "  g1, g2...   change the games mod 1, 2... loads for (all games, Doom,"
+        Write-Host "              Heretic, Hexen, Chex Quest; each press moves to the next)"
+        Write-Host "  Enter       save and close"
+        $answer = Read-Host "Choice"
         if ($answer -eq '') { exit 0 }
         $n = 0
         if ($answer -match '^[gG]\s*(\d+)$') {
