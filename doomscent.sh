@@ -27,95 +27,42 @@ if [ "$1" = "--descent2" ] || [ "$1" = "-descent2" ]; then
 	shift
 fi
 
-# Other mods (mods/mods.txt, or -file on the command line) load before
+# Other mods (the mods folder, or -file on the command line) load before
 # Doomscent so its ship, HUD and replacements win.
 set -- "$@" --end--
-CLI_MODS=""
-IWAD=""
-INFILE=0
-PREV=""
-for a in "$@"; do
-	shift
-	if [ "$a" = "--end--" ]; then break; fi
-	[ "$PREV" = "-iwad" ] && IWAD="$a"
-	PREV="$a"
-	case "$a" in
-		-file) INFILE=1; continue ;;
-		-*|+*) INFILE=0 ;;
-		*) if [ $INFILE = 1 ]; then CLI_MODS="$CLI_MODS
-$(cd "$(dirname "$a")" && pwd)/$(basename "$a")"; continue; fi ;;
-	esac
-	set -- "$@" "$a"
-done
-
-# mods/mods.txt: load order; # in front switches a mod off; [doom],
-# [heretic], [hexen], [chex] (or several, [doom,chex]) limits it to those
-# games.  New mods are added for Doom: gameplay mods are usually Doom-only.
-gameof() {
-	case "$(basename "$1" | tr 'A-Z' 'a-z')" in
-		heretic*) echo heretic ;; hex*) echo hexen ;; chex*) echo chex ;; *) echo doom ;;
-	esac
-}
+# mods/mods.txt lists them in load order; a # in front switches one off.
+# Mods not in the list yet are loaded too.
+MODS=""
 LIST="$ROOT/mods/mods.txt"
-ENTRIES=""
 if [ -f "$LIST" ]; then
 	while IFS= read -r line || [ -n "$line" ]; do
-		on=1
-		case "$line" in '#'*) on=0; line=${line#\#} ;; esac
-		games=""
-		case "$line" in '['*']'*) games=${line%%]*}; games=${games#[}; line=${line#*]} ;; esac
-		line=$(printf '%s' "$line" | sed 's/^ *//; s/ *$//')
-		[ -n "$line" ] && [ -e "$ROOT/mods/$line" ] && ENTRIES="$ENTRIES
-$on|$games|$line"
+		case "$line" in
+			''|'#'*) ;;
+			*) [ -e "$ROOT/mods/$line" ] && MODS="$MODS
+$ROOT/mods/$line" ;;
+		esac
 	done < "$LIST"
 fi
 for f in "$ROOT"/mods/*; do
 	name=$(basename "$f")
 	case "$name" in mods.txt|README.txt) continue ;; esac
 	[ -e "$f" ] || continue
-	printf '%s\n' "$ENTRIES" | grep -qF "|$name" && continue
-	ENTRIES="$ENTRIES
-1|doom|$name"
-	[ -f "$LIST" ] || printf '# Doomscent mods, loaded top to bottom.\n# # in front switches a mod off; [doom], [heretic], [hexen], [chex]\n# (or several, [doom,chex]) limits it to those games.\n' > "$LIST"
-	printf '[doom] %s\n' "$name" >> "$LIST"
-done
-
-# Mods for only some games need to know which game this is: from -iwad,
-# the only IWAD, or by asking (instead of GZDoom's own picker).
-GAME=""
-if [ -n "$IWAD" ]; then
-	GAME=$(gameof "$IWAD")
-elif printf '%s\n' "$ENTRIES" | grep -q '^1|[^|]'; then
-	IWADS=$(ls "$ROOT/data" | grep -iE '\.(wad|ipk3|pk3)$')
-	if [ "$(printf '%s\n' "$IWADS" | grep -c .)" -eq 1 ]; then
-		IWAD=$IWADS
-	elif [ -n "$IWADS" ]; then
-		echo "Which game?"
-		printf '%s\n' "$IWADS" | awk '{ printf "  %2d. %s\n", NR, $0 }'
-		n=""
-		while [ -z "$n" ] || ! printf '%s\n' "$IWADS" | sed -n "${n}p" | grep -q .; do
-			printf 'Number: '
-			read -r n < /dev/tty || exit 1
-			case "$n" in ''|*[!0-9]*|0) n="" ;; esac
-		done
-		IWAD=$(printf '%s\n' "$IWADS" | sed -n "${n}p")
-		set -- -iwad "$IWAD" "$@"
-	fi
-	[ -n "$IWAD" ] && GAME=$(gameof "$IWAD")
-fi
-MODS=""
-while IFS='|' read -r on games name; do
-	[ "$on" = 1 ] || continue
-	if [ -n "$games" ] && ! printf ',%s,' "$games" | tr -d ' ' | grep -q ",$GAME,"; then
-		echo "Not loading $name (only for: $games)."
-		continue
-	fi
+	if [ -f "$LIST" ] && grep -qxF -e "$name" -e "#$name" "$LIST"; then continue; fi
 	MODS="$MODS
-$ROOT/mods/$name"
-done <<EOF
-$ENTRIES
-EOF
-MODS="$MODS$CLI_MODS"
+$f"
+done
+INFILE=0
+for a in "$@"; do
+	shift
+	if [ "$a" = "--end--" ]; then break; fi
+	case "$a" in
+		-file) INFILE=1; continue ;;
+		-*|+*) INFILE=0 ;;
+		*) if [ $INFILE = 1 ]; then MODS="$MODS
+$(cd "$(dirname "$a")" && pwd)/$(basename "$a")"; continue; fi ;;
+	esac
+	set -- "$@" "$a"
+done
 has() { ls "$ROOT/data" 2>/dev/null | grep -qix "$1"; }
 if [ $D2 = 0 ] && ! has descent.pig && has descent2.hog; then
 	D2=1

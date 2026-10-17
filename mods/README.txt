@@ -3,9 +3,10 @@ Beautiful Doom...), as .pk3, .wad or .zip files or folders. The launcher
 loads them before Doomscent, so you fly the Descent ship through their
 monsters and gore. Their own weapons and pickups become Descent ones.
 
-Run Mods.bat to switch mods on and off, or to change which games a mod is
-for: new mods load only for Doom, since most gameplay mods (Brutal Doom
-included) don't work with Heretic, Hexen or Chex Quest. Or edit mods.txt
-here: a # in front of a mod switches it off, [doom] / [heretic] / [hexen]
-/ [chex] (or several: [doom,chex]) limits it to those games, and mods load
-top to bottom.
+To switch mods on and off without moving them, run Mods.bat (or edit
+mods.txt here: a # in front of a mod switches it off; mods load top to
+bottom).
+
+Most gameplay mods (Brutal Doom included) are for Doom only: switch them
+off before playing Heretic, Hexen or Chex Quest, or GZDoom stops with a
+script error.

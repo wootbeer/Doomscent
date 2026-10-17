@@ -24,13 +24,10 @@ function Find-Python {
 }
 
 # --- Other mods ---------------------------------------------------------------
-# mods\mods.txt lists the mods folder, loaded top to bottom.  A # in front
-# switches a mod off; [doom] (or [heretic], [hexen], [chex], or several:
-# [doom,chex]) limits it to those games, no tag means every game.  New
-# files are added switched on, for Doom: gameplay mods are usually Doom-only.
+# mods\mods.txt lists the mods folder, loaded top to bottom; a # in front of
+# a line switches that mod off.  New files are added switched on.
 $ModsDir = Join-Path $Root 'mods'
 $ModList = Join-Path $ModsDir 'mods.txt'
-$GameNames = @('doom', 'heretic', 'hexen', 'chex')
 
 function Read-ModList {
     $files = @(Get-ChildItem $ModsDir -ErrorAction SilentlyContinue |
@@ -38,52 +35,26 @@ function Read-ModList {
     $mods = [System.Collections.ArrayList]@()
     if (Test-Path $ModList) {
         foreach ($line in Get-Content $ModList) {
-            $t = $line.Trim()
-            $on = -not $t.StartsWith('#')
-            $t = $t.TrimStart('#').Trim()
-            $games = ''
-            if ($t -match '^\[([^\]]*)\]\s*(.*)$') { $games = $Matches[1].Trim().ToLower(); $t = $Matches[2].Trim() }
-            if ($files -contains $t -and -not ($mods | Where-Object { $_.Name -eq $t })) {
-                [void]$mods.Add([pscustomobject]@{ Name = $t; On = $on; Games = $games })
+            $name = $line.Trim().TrimStart('#').Trim()
+            if ($files -contains $name -and -not ($mods | Where-Object { $_.Name -eq $name })) {
+                [void]$mods.Add([pscustomobject]@{ Name = $name; On = -not $line.Trim().StartsWith('#') })
             }
         }
     }
     foreach ($f in $files) {
-        if (-not ($mods | Where-Object { $_.Name -eq $f })) { [void]$mods.Add([pscustomobject]@{ Name = $f; On = $true; Games = 'doom' }) }
+        if (-not ($mods | Where-Object { $_.Name -eq $f })) { [void]$mods.Add([pscustomobject]@{ Name = $f; On = $true }) }
     }
     return ,$mods
 }
 
 function Save-ModList($mods) {
-    $lines = @('# Doomscent mods, loaded top to bottom (or use Mods.bat).',
-               '# # in front switches a mod off; [doom], [heretic], [hexen], [chex]',
-               '# (or several, [doom,chex]) limits it to those games.')
-    foreach ($m in $mods) {
-        $tag = $(if ($m.Games) { "[$($m.Games)] " } else { '' })
-        $lines += $(if ($m.On) { '' } else { '#' }) + $tag + $m.Name
-    }
+    $lines = @('# Doomscent mods, loaded top to bottom.', '# Put # in front of a mod to switch it off (or use Mods.bat).')
+    foreach ($m in $mods) { $lines += $(if ($m.On) { $m.Name } else { '#' + $m.Name }) }
     Set-Content -Path $ModList -Value $lines -Encoding UTF8
 }
 
-function Get-GamesLabel($games) {
-    if (-not $games) { return 'all games' }
-    return (($games -split ',') | ForEach-Object {
-        $g = $_.Trim()
-        if ($g -eq 'chex') { 'Chex Quest' } else { (Get-Culture).TextInfo.ToTitleCase($g) }
-    }) -join ', '
-}
-
-# The game an IWAD is for.
-function Get-IwadGame($file) {
-    $n = [System.IO.Path]::GetFileName($file).ToLower()
-    if ($n -match '^heretic') { return 'heretic' }
-    if ($n -match '^hex') { return 'hexen' }
-    if ($n -match '^chex') { return 'chex' }
-    return 'doom'
-}
-
 if ($args -contains '-mods') {
-    # Mods.bat: switch mods on and off, and choose their games.
+    # Mods.bat: switch mods on and off.
     if (-not (Test-Path $ModsDir)) { New-Item -ItemType Directory $ModsDir | Out-Null }
     $mods = Read-ModList
     while ($true) {
@@ -91,38 +62,17 @@ if ($args -contains '-mods') {
         Write-Host "Doomscent mods (in $ModsDir), loaded top to bottom:"
         if ($mods.Count -eq 0) { Write-Host "  (none yet: put mod files or folders in the mods folder)" }
         for ($i = 0; $i -lt $mods.Count; $i++) {
-            Write-Host ("  {0,2}. [{1}] {2}  ({3})" -f ($i + 1), $(if ($mods[$i].On) { 'x' } else { ' ' }), $mods[$i].Name, (Get-GamesLabel $mods[$i].Games))
+            Write-Host ("  {0,2}. [{1}] {2}" -f ($i + 1), $(if ($mods[$i].On) { 'x' } else { ' ' }), $mods[$i].Name)
         }
         Save-ModList $mods
         if ($mods.Count -eq 0) { exit 0 }
         Write-Host ""
-        Write-Host "  [x] = on, [ ] = off.  After the name: the games it loads for."
-        Write-Host "  1, 2, 3...  switch that mod on or off"
-        Write-Host "  g1, g2...   choose the games mod 1, 2... loads for"
-        Write-Host "  Enter       save and close"
-        $answer = Read-Host "Choice"
+        Write-Host "  [x] = on, [ ] = off.  Most gameplay mods (Brutal Doom included) are for"
+        Write-Host "  Doom only: switch them off before playing Heretic, Hexen or Chex Quest."
+        $answer = Read-Host "Type a number to switch that mod on/off, or press Enter to finish"
         if ($answer -eq '') { exit 0 }
         $n = 0
-        if ($answer -match '^[gG]\s*(\d+)$') {
-            $n = [int]$Matches[1]
-            if ($n -ge 1 -and $n -le $mods.Count) {
-                Write-Host ""
-                Write-Host "Which games should $($mods[$n - 1].Name) load for?"
-                Write-Host "   0. All games"
-                for ($i = 0; $i -lt $GameNames.Count; $i++) { Write-Host ("   {0}. {1}" -f ($i + 1), (Get-GamesLabel $GameNames[$i])) }
-                $pick = Read-Host "Number (or several, like 1,4)"
-                $games = @()
-                $ok = $pick -match '^[\d,\s]+$'
-                foreach ($p in ($pick -split '[,\s]+' | Where-Object { $_ -ne '' })) {
-                    $k = [int]$p
-                    if ($k -eq 0) { $games = @(); break }
-                    if ($k -gt $GameNames.Count) { $ok = $false; break }
-                    if ($games -notcontains $GameNames[$k - 1]) { $games += $GameNames[$k - 1] }
-                }
-                if ($ok) { $mods[$n - 1].Games = $games -join ',' }
-            }
-        }
-        elseif ([int]::TryParse($answer, [ref]$n) -and $n -ge 1 -and $n -le $mods.Count) { $mods[$n - 1].On = -not $mods[$n - 1].On }
+        if ([int]::TryParse($answer, [ref]$n) -and $n -ge 1 -and $n -le $mods.Count) { $mods[$n - 1].On = -not $mods[$n - 1].On }
     }
 }
 
@@ -184,6 +134,11 @@ foreach ($a in $args) {
     elseif ($inFile -and -not ($a.StartsWith('-') -or $a.StartsWith('+'))) { $ModFiles += (Resolve-Path $a).Path }
     else { $inFile = $false; $GZArgs += $a }
 }
+if (Test-Path $ModsDir) {
+    $mods = Read-ModList
+    Save-ModList $mods
+    $ModFiles = @($mods | Where-Object { $_.On } | ForEach-Object { Join-Path $ModsDir $_.Name }) + $ModFiles
+}
 $D1Files = (Test-Path (Join-Path $Data 'DESCENT.PIG')) -and (Test-Path (Join-Path $Data 'DESCENT.HOG'))
 $D2Files = (Test-Path (Join-Path $Data 'DESCENT2.HOG')) -and (Test-Path (Join-Path $Data 'DESCENT2.HAM')) -and
            (Test-Path (Join-Path $Data 'GROUPA.PIG')) -and
@@ -226,32 +181,6 @@ if ($stale) {
 $iwads = Get-ChildItem $Data -File | Where-Object { $_.Name -match '\.(wad|ipk3|pk3)$' }
 if (-not $iwads) {
     Fail "Copy a Doom IWAD (DOOM.WAD, DOOM2.WAD, ... or Freedoom's freedoom2.wad) into $Data\."
-}
-
-# Mods for only some games need to know which game this is: from -iwad,
-# the only IWAD, or by asking (instead of GZDoom's own picker).
-if (Test-Path $ModsDir) {
-    $mods = Read-ModList
-    Save-ModList $mods
-    $on = @($mods | Where-Object { $_.On })
-    $game = $null
-    $k = [array]::IndexOf(@($GZArgs | ForEach-Object { $_.ToLower() }), '-iwad')
-    if ($k -ge 0 -and $k + 1 -lt $GZArgs.Count) { $game = Get-IwadGame $GZArgs[$k + 1] }
-    elseif (@($iwads).Count -eq 1) { $game = Get-IwadGame @($iwads)[0].Name }
-    elseif ($on | Where-Object { $_.Games }) {
-        Write-Host "Which game?"
-        $list = @($iwads | Sort-Object Name)
-        for ($i = 0; $i -lt $list.Count; $i++) { Write-Host ("  {0,2}. {1}" -f ($i + 1), $list[$i].Name) }
-        $n = 0
-        do { $answer = Read-Host "Number" } until ([int]::TryParse($answer, [ref]$n) -and $n -ge 1 -and $n -le $list.Count)
-        $GZArgs = @('-iwad', $list[$n - 1].Name) + $GZArgs
-        $game = Get-IwadGame $list[$n - 1].Name
-    }
-    $use = @($on | Where-Object { -not $_.Games -or ($game -and (($_.Games -split ',') | ForEach-Object { $_.Trim() }) -contains $game) })
-    foreach ($m in $on) {
-        if ($use -notcontains $m) { Write-Host "Not loading $($m.Name) ($(Get-GamesLabel $m.Games) only)." }
-    }
-    $ModFiles = @($use | ForEach-Object { Join-Path $ModsDir $_.Name }) + $ModFiles
 }
 
 # Run from data\ so GZDoom finds the IWADs there and offers a choice.
