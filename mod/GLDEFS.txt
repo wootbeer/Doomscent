@@ -1,0 +1,7 @@
+// Descent's "bittersweet" cheat (acid mode).
+HardwareShader PostProcess scene
+{
+	Name "ddacid"
+	Shader "shaders/ddacid.fp" 330
+	Uniform float timer
+}

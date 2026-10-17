@@ -202,7 +202,7 @@ class DDShip : PlayerPawn
 		UserCmd cmd = player.cmd;
 		if (!orientInit) ResetOrientation();
 
-		double dt = DD.TIC;
+		double dt = cheatTurbo ? DD.TIC * 2 : DD.TIC;
 		int buttons = cmd.buttons;
 
 		// --- Rotation ---------------------------------------------------
@@ -289,7 +289,7 @@ class DDShip : PlayerPawn
 
 		// --- Translation ------------------------------------------------
 		// Read back what the engine did to us last tic (wall slides etc).
-		shipVel = Vel * TICRATE;
+		shipVel = Vel / dt;
 
 		Vector3 thrustDir = (0, 0, 0);
 		double fm = clamp(cmd.forwardmove / 6400., -1, 1);
@@ -313,7 +313,7 @@ class DDShip : PlayerPawn
 			accel += up * (wiggle * DD.SCALE);
 		}
 		shipVel = SimulateDrag(shipVel, accel, DD.SHIP_DRAG, dt);
-		Vel = shipVel / TICRATE;
+		Vel = shipVel * dt;
 
 		if (fm != 0 || sm != 0)
 			PlayRunning();
@@ -533,6 +533,7 @@ class DDShip : PlayerPawn
 
 		HandleFiring();
 		D2Tick();
+		RamMonsters();
 		if (homingWarning > 0) homingWarning--;
 	}
 
@@ -751,7 +752,7 @@ class DDShip : PlayerPawn
 				if (Energy() < s.energy) { AutoSelectPrimary(); break; }
 				UseEnergy(s.energy);
 			}
-			nextPrimaryTime += s.fireWait;
+			nextPrimaryTime += FireWait(s.fireWait);
 			FirePrimaryOnce(primary, id);
 		}
 		primaryReadyTime = nextPrimaryTime;
@@ -873,7 +874,7 @@ class DDShip : PlayerPawn
 			fusionCharge = 0;
 			DDWeaponStats s;
 			DDWeaponTable.Get(14, s);
-			nextPrimaryTime = now + s.fireWait;
+			nextPrimaryTime = now + FireWait(s.fireWait);
 			primaryReadyTime = nextPrimaryTime;
 			FirePrimaryOnce(DD.PW_FUSION, 14, mult);
 		}
@@ -892,7 +893,7 @@ class DDShip : PlayerPawn
 		DDWeaponStats s;
 		DDWeaponTable.Get(id, s);
 		TakeInventory(ammo, 1);
-		nextSecondaryTime = now + s.fireWait;
+		nextSecondaryTime = now + FireWait(s.fireWait);
 		secondaryReadyTime = nextSecondaryTime;
 
 		switch (secondary)
@@ -997,6 +998,7 @@ class DDShip : PlayerPawn
 		mo.weaponId = weaponId;
 		mo.multiplier = multiplier;
 		mo.InitStats(s);
+		CheatProjectile(mo);
 
 		double speed = s.speed * DD.SCALE;
 		if (weaponId == 16 || weaponId == 38)
@@ -1111,11 +1113,33 @@ class DDShip : PlayerPawn
 	// own weapon handling, so the ship only takes Doomscent's.
 	// Also refuse Tilt++ (in Project Brutality and others): it rewrites the
 	// player's roll every tic, which would undo the ship's.
+	// Descent II's weapons and missiles only exist in Descent II mode (the
+	// Descent 1 asset pack has no art for them); cheats like IDKFA would
+	// hand them out.
 	override bool CanReceive(Inventory item)
 	{
 		if (item is 'Weapon' && !(item is 'DDPrimaryWeapon')) return false;
 		if (item.GetClassName() == 'Z_TiltMe') return false;
+		if (!DD.IsD2() && DD.IsD2Item(item.GetClass())) return false;
 		return Super.CanReceive(item);
+	}
+
+	// Doom's give-all cheats (IDKFA, "give all"...) max the laser too.
+	override void CheatGive(String name, int amount)
+	{
+		Super.CheatGive(name, amount);
+		if (health > 0 && (name ~== "all" || name ~== "everything" || name ~== "weapons"))
+			SetLaserLevel(DD.IsD2() ? 5 : 3);
+		// "Give ammo" attaches every ammo type without asking CanReceive.
+		if (!DD.IsD2())
+		{
+			for (let i = inv; i; )
+			{
+				let next = i.inv;
+				if (DD.IsD2Item(i.GetClass())) i.Destroy();
+				i = next;
+			}
+		}
 	}
 
 	override int DamageMobj(Actor inflictor, Actor source, int damage, Name mod, int flags, double angle)

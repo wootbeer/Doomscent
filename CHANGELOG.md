@@ -1,3 +1,11 @@
+# Doomscent 0.5.0
+
+- Descent's cheat codes: Descent 1's in Descent 1 mode (start with
+  `gabbagabbahey`), Descent II's in Descent II mode. Doom's, Heretic's and
+  Hexen's own cheats still work
+- Cheats like IDKFA no longer give Descent II weapons in Descent 1 mode,
+  and max out the laser
+
 # Doomscent 0.4.3
 
 - Powerups that monsters drop float just above the floor; with mods like

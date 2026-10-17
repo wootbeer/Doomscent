@@ -2,5 +2,5 @@ GameInfo
 {
 	PlayerClasses = "DDShip"
 	StatusBarClass = "DDStatusBar"
-	AddEventHandlers = "DDEventHandler", "DDMusicHandler"
+	AddEventHandlers = "DDEventHandler", "DDCheatHandler", "DDMusicHandler"
 }
