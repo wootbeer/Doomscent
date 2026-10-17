@@ -31,6 +31,7 @@ def main():
     files = {
         'Doomscent.bat': 'Doomscent.bat',
         'Doomscent2.bat': 'Doomscent2.bat',
+        'Mods.bat': 'Mods.bat',
         'doomscent.sh': 'doomscent.sh',
         'README.md': 'README.md',
         'LICENSE': 'LICENSE',
