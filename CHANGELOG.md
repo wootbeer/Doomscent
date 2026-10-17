@@ -1,3 +1,8 @@
+# Doomscent 0.4.3
+
+- Powerups that monsters drop float just above the floor; with mods like
+  Brutal Doom they used to rise up to the ceiling
+
 # Doomscent 0.4.2
 
 - Weapon switching works again with mods like Brutal Doom, which set their

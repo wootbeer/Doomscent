@@ -5,7 +5,7 @@ six-degrees-of-freedom flight, cockpit and weapons.
 
 ![Flying the Pyro-GX through Doom II](docs/screenshot.png)
 
-▶ **[Watch it in action on YouTube](https://www.youtube.com/watch?v=-WYTXA3c60Q)**
+▶ **[Watch it in action on YouTube](https://www.youtube.com/watch?v=O0O9yww072o)**
 
 Doomscent is a mod for an unmodified [GZDoom](https://zdoom.org/downloads)
 (4.14 or newer). Doom monsters, maps and music stay as they are. The player
