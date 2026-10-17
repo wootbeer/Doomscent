@@ -6,6 +6,10 @@
   their monsters and gore. Their own weapons, ammo, health and armour
   pickups become Descent powerups, and the ship ignores add-ons that would
   fight its controls (other weapons, Tilt++ view tilting)
+- Mods that pick their player class in KEYCONF (like Brutal Doom) no longer
+  replace the ship
+- "Bind Descent-style keys" now really binds Ctrl (slide down) and Shift
+  (Descent II afterburner); the key names were wrong
 
 # Doomscent 0.4.0
 
