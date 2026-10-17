@@ -87,7 +87,9 @@ Doomscent works with gameplay mods such as Brutal Doom, Project Brutality
 and Beautiful Doom: you fly the Pyro-GX through their monsters, gore and
 effects. Put the mod's file (or folder) in the `mods` folder and start
 Doomscent as usual; the launcher loads it first, so Doomscent's ship and
-cockpit take over. The mod's weapons and pickups become Descent ones, by
+cockpit take over. To switch mods on and off without moving them, run
+`Mods.bat` (or edit `mods/mods.txt`: a `#` in front of a mod switches it
+off, and mods load top to bottom). The mod's weapons and pickups become Descent ones, by
 type. (Running GZDoom yourself, list the mod before Doomscent's files:
 `-file brutal.pk3 dd_descent_assets.pk3 doomscent.pk3`.)
 
@@ -253,6 +255,7 @@ tools/build_pk3.py    zips mod/ into doomscent.pk3
 tools/launcher.ps1    the Windows launcher (run by Doomscent.bat / Doomscent2.bat)
 tools/make_release.py builds the release zip (used by .github/workflows)
 Doomscent.bat, Doomscent2.bat, doomscent.sh   launchers
+Mods.bat              switches the mods in mods/ on and off
 data/                 where you put your WADs and Descent files (git-ignored)
 ```
 

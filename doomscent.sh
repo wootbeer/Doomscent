@@ -30,9 +30,25 @@ fi
 # Other mods (the mods folder, or -file on the command line) load before
 # Doomscent so its ship, HUD and replacements win.
 set -- "$@" --end--
+# mods/mods.txt lists them in load order; a # in front switches one off.
+# Mods not in the list yet are loaded too.
 MODS=""
+LIST="$ROOT/mods/mods.txt"
+if [ -f "$LIST" ]; then
+	while IFS= read -r line || [ -n "$line" ]; do
+		case "$line" in
+			''|'#'*) ;;
+			*) [ -e "$ROOT/mods/$line" ] && MODS="$MODS
+$ROOT/mods/$line" ;;
+		esac
+	done < "$LIST"
+fi
 for f in "$ROOT"/mods/*; do
-	[ -e "$f" ] && MODS="$MODS
+	name=$(basename "$f")
+	case "$name" in mods.txt|README.txt) continue ;; esac
+	[ -e "$f" ] || continue
+	if [ -f "$LIST" ] && grep -qxF -e "$name" -e "#$name" "$LIST"; then continue; fi
+	MODS="$MODS
 $f"
 done
 INFILE=0

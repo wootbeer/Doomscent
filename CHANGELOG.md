@@ -1,3 +1,13 @@
+# Doomscent 0.4.2
+
+- Weapon switching works again with mods like Brutal Doom, which set their
+  own weapon slots
+- Switch mods on and off without moving them: run `Mods.bat`, or edit
+  `mods/mods.txt` (a `#` in front of a mod switches it off; mods load top
+  to bottom)
+- The Windows launcher works when Python is installed as `python` rather
+  than with the `py` launcher
+
 # Doomscent 0.4.1
 
 - Works with gameplay mods like Brutal Doom, Project Brutality and Beautiful

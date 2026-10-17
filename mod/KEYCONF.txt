@@ -6,6 +6,20 @@
 clearplayerclasses
 addplayerclass DDShip
 
+// Weapon slots, for the same reason (Brutal Doom sets its own here).
+// 6-0 pick secondaries in DDShip.PickWeapon, so they stay empty.
+weaponsection Doomscent
+setslot 1 DDLaserCannon DDSuperLaserCannon
+setslot 2 DDVulcanCannon DDGaussCannon
+setslot 3 DDSpreadfireCannon DDHelixCannon
+setslot 4 DDPlasmaCannon DDPhoenixCannon
+setslot 5 DDFusionCannon DDOmegaCannon
+setslot 6
+setslot 7
+setslot 8
+setslot 9
+setslot 0
+
 addkeysection "Doomscent" DoomscentKeys
 
 addmenukey "Bank left" +user1
