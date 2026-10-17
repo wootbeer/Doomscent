@@ -5,6 +5,10 @@
 - Switch mods on and off without moving them: run `Mods.bat`, or edit
   `mods/mods.txt` (a `#` in front of a mod switches it off; mods load top
   to bottom)
+- Mods can be limited to some games, so Brutal Doom no longer crashes
+  Heretic: new mods load only for Doom, and `Mods.bat` changes that. With
+  several games in `data`, the launcher asks which one to play when a mod
+  needs to know
 - The Windows launcher works when Python is installed as `python` rather
   than with the `py` launcher
 
