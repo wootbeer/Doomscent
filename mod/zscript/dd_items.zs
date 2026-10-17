@@ -156,6 +156,8 @@ class DDPowerup : CustomInventory
 {
 	double powSize;    // Descent powerup size (radius, Descent units)
 	property PowSize: powSize;
+	bool hover;        // keeps to its float height above the floor
+	double halfHeight;
 
 	Default
 	{
@@ -176,16 +178,33 @@ class DDPowerup : CustomInventory
 	{
 		Super.PostBeginPlay();
 		SetSpriteScale();
-		// Float so the centred sprite just touches the floor at the bottom
-		// of its bob, and stays clear of the ceiling at the top.
-		if (pos.z <= floorz + 1)
-		{
-			double half = SpriteHalfHeight();
-			double bob = 8 * FloatBobStrength;
-			double z = floorz + half + bob - 1;
-			double top = ceilingz - half - bob;
-			SetZ(max(min(z, top), floorz));
-		}
+		halfHeight = SpriteHalfHeight();
+		// Items on the floor, and ones dropped during play (by monsters,
+		// often in mid-air), float at their hover height; ones a map
+		// places in the air stay there.
+		hover = pos.z <= floorz + 1 || Level.maptime > 0 || bDropped;
+		if (hover && pos.z <= floorz + 1) SetZ(HoverZ());
+	}
+
+	// The centred sprite just touches the floor at the bottom of its bob,
+	// and stays clear of the ceiling at the top.
+	double HoverZ()
+	{
+		double bob = 8 * FloatBobStrength;
+		double z = floorz + halfHeight + bob - 1;
+		double top = ceilingz - halfHeight - bob;
+		return max(min(z, top), floorz);
+	}
+
+	override void Tick()
+	{
+		Super.Tick();
+		if (!hover || owner || bDestroyed || IsFrozen()) return;
+		// Drift down to the hover height (and follow lifts).
+		Vel = (Vel.XY * 0.9, 0);
+		double z = HoverZ();
+		if (pos.z > z + 4) SetZ(max(z, pos.z - 4));
+		else if (pos.z != z) SetZ(z);
 	}
 
 	double SpriteHalfHeight()
