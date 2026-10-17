@@ -81,6 +81,16 @@ and the launcher will run the script instead.
 GZDoom needs its OpenGL or Vulkan renderer (the default); the software
 renderer can't roll the view.
 
+## Other mods
+
+Doomscent works with gameplay mods such as Brutal Doom, Project Brutality
+and Beautiful Doom: you fly the Pyro-GX through their monsters, gore and
+effects. Put the mod's file (or folder) in the `mods` folder and start
+Doomscent as usual; the launcher loads it first, so Doomscent's ship and
+cockpit take over. The mod's weapons and pickups become Descent ones, by
+type. (Running GZDoom yourself, list the mod before Doomscent's files:
+`-file brutal.pk3 dd_descent_assets.pk3 doomscent.pk3`.)
+
 ## Linux / macOS
 
 Install GZDoom 4.14+ and Python 3, put your files in `data/` as above, and
