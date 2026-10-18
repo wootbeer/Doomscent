@@ -1,3 +1,22 @@
+# Doomscent 0.5.1
+
+- The 3D view fills the cockpit's window, as in Descent, instead of running
+  behind the dashboard: the reticle sits in the middle of the window, and
+  shots from the lower guns (like the omega's lightning) stay in view.
+  On widescreen the laser guns sit a little lower and wider apart than
+  Descent's, so their shots come out from under the dashboard on either
+  side as they do in Descent. Without the cockpit (or
+  with the full-screen view size) the view is as before
+- Mods with their own maps (UDMF, like Doom City) have all their placed
+  things again: the ship's Hexen spawn class kept every thing in such
+  maps from appearing. It now only applies in Hexen
+- Descent II's omega cannon looks like Descent II's: a fresh arc of
+  lightning blobs every tic, solid instead of faded, with crisp lightning
+  streaks and blue-white light, and the impact flash every quarter second
+- The Descent 1 shareware (1.0-1.2) converts: the converter no longer
+  crashes on its PIG, and reads the game tables it keeps in its HOG, so
+  the cockpit gauges, weapon pictures and 3D weapon models all work
+
 # Doomscent 0.5.0
 
 - Descent's cheat codes: Descent 1's in Descent 1 mode (start with

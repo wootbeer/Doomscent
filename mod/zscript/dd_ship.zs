@@ -73,9 +73,6 @@ class DDShip : PlayerPawn
 		Player.ViewHeight 16;
 		Player.AttackZOffset 0;
 		Player.UseRange 96;
-		// Hexen spawns weapons per player class; spawn the Fighter's so
-		// there aren't three copies of everything.
-		Player.SpawnClass "Fighter";
 		Player.MaxHealth 200;
 		Player.ForwardMove 0, 0;
 		Player.SideMove 0, 0;
@@ -950,18 +947,24 @@ class DDShip : PlayerPawn
 	}
 
 	// Player_ship->gun_points[] for the Pyro-GX (Descent units, x right,
-	// y up, z forward).
+	// y up, z forward).  A widescreen view shows more to the sides than
+	// Descent's 4:3 one, so the laser guns sit GUN_SPREAD times wider and
+	// the forward guns GUN_DROP lower: their shots then look as they do
+	// in Descent, coming out from under the dashboard on either side.
+	const GUN_DROP = 0.75;
+	const GUN_SPREAD = 4. / 3;
+
 	static Vector3 GunPoint(int gun)
 	{
 		switch (gun)
 		{
-			case 0: return (2.23, -0.91, 0.55);
-			case 1: return (-2.25, -0.91, 0.53);
-			case 2: return (3.39, -1.81, 2.26);
-			case 3: return (-3.41, -1.80, 2.26);
+			case 0: return (2.23 * GUN_SPREAD, -0.91 - GUN_DROP, 0.55);
+			case 1: return (-2.25 * GUN_SPREAD, -0.91 - GUN_DROP, 0.53);
+			case 2: return (3.39 * GUN_SPREAD, -1.81 - GUN_DROP, 2.26);
+			case 3: return (-3.41 * GUN_SPREAD, -1.80 - GUN_DROP, 2.26);
 			case 4: return (2.33, 0.0, -1.39);
 			case 5: return (-2.39, 0.0, -1.39);
-			case 6: return (0.02, -1.34, 2.82);
+			case 6: return (0.02, -1.34 - GUN_DROP, 2.82);
 			case 7: return (-0.02, -1.34, -2.91);
 		}
 		return (0, 0, 0);
@@ -1181,5 +1184,17 @@ class DDShip : PlayerPawn
 		if (fx) fx.Setup(0, 40);
 		bNoGravity = false;
 		Gravity = 0.25;
+	}
+}
+
+// Hexen places some things (weapons, some monsters) per player class; in
+// Hexen the ship gets the Fighter's.  Only there: in UDMF maps without
+// class flags, as most mods' are, a spawn class would spawn no things.
+// filter/game-hexen/KEYCONF.txt makes this the player class.
+class DDHexenShip : DDShip
+{
+	Default
+	{
+		Player.SpawnClass "Fighter";
 	}
 }

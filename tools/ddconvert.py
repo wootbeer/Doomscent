@@ -23,6 +23,7 @@ non-commercial licence.
 import argparse
 import math
 import os
+import re
 import struct
 import sys
 import zipfile
@@ -136,6 +137,10 @@ D2_MODEL_ACTORS = {'DDLaserBolt5': 'laser5', 'DDLaserBolt6': 'laser6',
 D2_EFFECT_VCLIPS = [68, 80, 85, 86, 87, 88, 92, 95, 98, 103, 104, 105, 106]
 D2_POWERUP_VCLIPS = [69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 81, 82, 83, 89, 90, 91, 102]
 
+# Vclips upscaled (nearest neighbour) so texture filtering doesn't blur them:
+# the omega's tiny lightning frames turn into puffs otherwise.
+SHARP_VCLIPS = {103: 4}
+
 
 def vclip_sprite(prefix, vc):
     """Sprite name for a vclip: DX05, ..., DX99 then DY00 for 100 (DP/DQ
@@ -187,12 +192,201 @@ class Sound:
     __slots__ = ('name', 'length', 'offset')
 
 
+class TblGameData:
+    """The game tables of the 1.0-1.2 shareware, which keeps them as text:
+    bitmaps.bin in the HOG is bitmaps.tbl, encoded.  Only the parts the
+    converter uses are read (BM.C), into the same shape as GameData."""
+
+    colors15 = True             # POF models still have 15-bit colours
+
+    def __init__(self, text, hog, pig):
+        self.hog, self.pig = hog, pig
+        self.gauges = [0] * MAX_GAUGE_BMS
+        self.vclips = [(0, 0.0, [], 0.0)] * 110
+        self.vclip_sounds = [-1] * 110
+        self.sound_map = [255] * MAX_SOUNDS
+        self.weapons = []
+        self.cockpits = [0, 0, 0]
+        self.ship = [-1]
+        self.models, self.model_data = [], []
+        self.obj_bitmaps, self.obj_bitmap_ptrs = [], []
+        self._parse([ln.strip() for ln in text.split('\n')])
+        while len(self.weapons) < 30:
+            self.weapons.append(self._weapon())
+
+    @staticmethod
+    def decode(data):
+        """Each byte XORed with 0xE9 and rotated right two bits; line ends
+        come out as 0x8F."""
+        out = bytearray()
+        for c in data:
+            v = c ^ 0xE9
+            out.append(((v << 2) | (v >> 6)) & 0xFF)
+        return out.decode('latin-1').replace('\x8f', '\n').replace('\r', '')
+
+    @staticmethod
+    def _weapon():
+        w = [0] * 44
+        w[1] = w[2] = -1        # render type, model, inner model ... picture at 43
+        return w
+
+    def _bitmap(self, name):
+        return self.pig.by_name.get(os.path.splitext(name.lower())[0]) or 0
+
+    def _abm_frames(self, name):
+        base = os.path.splitext(name.lower())[0]
+        frames = []
+        while (base + '#%d' % len(frames)) in self.pig.by_name:
+            frames.append(self.pig.by_name[base + '#%d' % len(frames)])
+        return frames
+
+    def _pof_model(self, name, textures):
+        """Loads a .pof model with the textures the table line gives it
+        (resolved once the whole table is read) and returns its number."""
+        d = self.hog.get(name.lower())
+        if d is None or d[:4] != b'PSPO':
+            return -1
+        p, idta = 6, None                       # 'PSPO', 16-bit version
+        while p + 8 <= len(d):
+            clen = struct.unpack_from('<i', d, p + 4)[0]
+            if d[p:p + 4] == b'IDTA':
+                idta = d[p + 8:p + 8 + clen]
+            p += 8 + clen
+        if idta is None:
+            return -1
+        self.models.append((len(textures), len(self.obj_bitmap_ptrs), 0))
+        for t in textures:
+            self.obj_bitmap_ptrs.append(len(self.obj_bitmaps))
+            self.obj_bitmaps.append(t)
+        self.model_data.append(idta)
+        return len(self.models) - 1
+
+    def _resolve_textures(self, eclips):
+        """%N names an effect clip (animated texture): its first frame."""
+        for k, t in enumerate(self.obj_bitmaps):
+            if t.startswith('%'):
+                self.obj_bitmaps[k] = eclips.get(int(t[1:]), 0)
+            else:
+                self.obj_bitmaps[k] = self._bitmap(t) or (self._abm_frames(t) or [0])[0]
+
+    @staticmethod
+    def _args(rest):
+        """A table line's key=value pairs, and the bare texture names in
+        order with where each model's start ('model', 'weapon_pof',
+        'simple_model').  strength= and speed= take five values."""
+        toks = rest.split()
+        args, textures, starts = {}, [], []
+        i = 0
+        while i < len(toks):
+            t = toks[i]
+            i += 1
+            if '=' not in t:
+                if t != 'multi_textures':
+                    textures.append(t)
+                continue
+            k, v = t.split('=', 1)
+            if k in ('strength', 'speed'):
+                i += 4
+            if k in ('model', 'weapon_pof', 'simple_model'):
+                starts.append(len(textures))
+            args.setdefault(k, v)
+        return args, textures, starts
+
+    @staticmethod
+    def _first_model_textures(textures, starts):
+        return textures[starts[0]:starts[1] if len(starts) > 1 else len(textures)] if starts else []
+
+    def _gauge(self, line, gauge):
+        """One bitmap in the $GAUGES list: a .bbm takes one slot, an .abm
+        one per frame."""
+        name = line.split()[0] if line else ''
+        if not name or '=' in name:
+            return gauge
+        if name.lower().endswith('.abm'):
+            for f in self._abm_frames(name):
+                if gauge < MAX_GAUGE_BMS:
+                    self.gauges[gauge] = f
+                gauge += 1
+        else:
+            if gauge < MAX_GAUGE_BMS:
+                self.gauges[gauge] = self._bitmap(name)
+            gauge += 1
+        return gauge
+
+    def _parse(self, lines):
+        def kv(line):
+            return dict(re.findall(r'(\w+)=("[^"]*"|\S+)', line))
+
+        sounds = {s.name: k for k, s in enumerate(self.pig.sounds)}
+        eclips = {}
+        section = None
+        gauge = cockpit = 0
+        i = 0
+        while i < len(lines):
+            line = lines[i].lstrip('@')         # @: registered-only entries
+            i += 1
+            if not line or line.startswith(';'):
+                continue
+            word = line.split()[0]
+            if not word.startswith('$'):
+                if section == '$COCKPIT' and cockpit < 3:
+                    self.cockpits[cockpit] = self._bitmap(word)
+                    cockpit += 1
+                elif section == '$GAUGES':
+                    gauge = self._gauge(line, gauge)
+                continue
+            section = word
+            rest = line[len(word):].strip()
+            if section in ('$VCLIP', '$ECLIP'):
+                a = kv(rest)
+                num = int(a['clip_num'])
+                # The bitmap is on the next line.
+                name = lines[i].lstrip('@').split()[0] if i < len(lines) and lines[i] else ''
+                i += 1
+                frames = self._abm_frames(name)
+                if not frames:
+                    continue
+                if section == '$ECLIP':
+                    eclips[num] = frames[0]
+                elif num < len(self.vclips):
+                    self.vclips[num] = (len(frames), float(a.get('time', 1)) / len(frames), frames, 0.0)
+                    self.vclip_sounds[num] = int(a.get('sound_num', -1))
+            elif section == '$SOUND':
+                parts = rest.split()
+                if len(parts) >= 2 and int(parts[0]) < MAX_SOUNDS:
+                    k = sounds.get(os.path.splitext(parts[1].lower())[0])
+                    if k is not None:
+                        self.sound_map[int(parts[0])] = k
+            elif section in ('$WEAPON', '$WEAPON_UNUSED'):
+                w = self._weapon()
+                if section == '$WEAPON':
+                    a, textures, starts = self._args(rest)
+                    if 'picture' in a:
+                        w[43] = self._bitmap(a['picture'])
+                    if 'weapon_pof' in a:
+                        # The inner model shares the outer one's textures.
+                        tex = self._first_model_textures(textures, starts)
+                        w[1] = self._pof_model(a['weapon_pof'], tex)
+                        if w[1] >= 0:
+                            w[0] = 2            # render type: polygon model
+                            if 'weapon_pof_inner' in a:
+                                w[2] = self._pof_model(a['weapon_pof_inner'], tex)
+                self.weapons.append(w)
+            elif section == '$PLAYER_SHIP':
+                a, textures, starts = self._args(rest)
+                if 'model' in a:
+                    self.ship = [self._pof_model(a['model'], self._first_model_textures(textures, starts))]
+            elif section == '$GAUGES':
+                gauge = self._gauge(rest, gauge)
+        self._resolve_textures(eclips)
+
+
 class Pig:
     def __init__(self, path):
         self.data = open(path, 'rb').read()
         self.gamedata = None
         start = struct.unpack_from('<i', self.data, 0)[0]
-        if 0 < start < len(self.data):
+        if 0 < start < len(self.data) and not self._directory_at_start():
             self.data_start = start
             try:
                 self.gamedata = GameData(self.data, 4)
@@ -203,6 +397,19 @@ class Pig:
             # Shareware / old PIGs have no embedded game data.
             self.data_start = 0
         self._read_directory()
+
+    def _directory_at_start(self):
+        """Shareware 1.0-1.2 PIGs start straight with the bitmap directory
+        (bitmap count, sound count, then 8-character names) and have no
+        game tables, so the first word is a count, not an offset."""
+        d = self.data
+        nbm, nsnd = struct.unpack_from('<ii', d, 0)
+        if not (0 < nbm < 5000 and 0 <= nsnd < 1000):
+            return False
+        if 8 + nbm * 17 + nsnd * 20 > len(d):
+            return False
+        name = d[8:16].split(b'\0')[0]
+        return len(name) > 0 and all(32 < c < 127 for c in name)
 
     def _read_directory(self):
         d = self.data
@@ -526,6 +733,17 @@ class GameData2:
 # --------------------------------------------------------------------------
 # PNG / WAV writers
 
+def upscale(w, h, rgba, k):
+    """Nearest-neighbour upscale of RGBA pixels by a whole factor."""
+    out = bytearray()
+    for y in range(h):
+        row = bytearray()
+        for x in range(w):
+            row += rgba[(y * w + x) * 4:(y * w + x) * 4 + 4] * k
+        out += row * k
+    return w * k, h * k, out
+
+
 def png(width, height, rgba, offsets=None):
     def chunk(tag, payload):
         c = struct.pack('>I', len(payload)) + tag + payload
@@ -747,6 +965,13 @@ class Converter:
         else:
             self.pig = Pig(pig)
             self.gd = self.pig.gamedata
+            if self.gd is None and 'bitmaps.bin' in self.hog:
+                # The shareware's tables are text in the HOG.
+                try:
+                    self.gd = TblGameData(TblGameData.decode(self.hog['bitmaps.bin']), self.hog, self.pig)
+                except (struct.error, ValueError, KeyError, IndexError) as e:
+                    print('warning: could not read bitmaps.bin (%s); '
+                          'models and some sprites will be skipped' % e)
             palname = 'palette.256'
         pal = self.hog.get(palname)
         if pal is None:
@@ -774,8 +999,12 @@ class Converter:
             out[i * 4:i * 4 + 4] = bytes((r, g, b, 255))
         return w, h, out
 
-    def write_graphic(self, path, index, offsets=None):
+    def write_graphic(self, path, index, offsets=None, scale=1):
         w, h, data = self.rgba(index)
+        if scale > 1:
+            w, h, data = upscale(w, h, data, scale)
+            if offsets:
+                offsets = (offsets[0] * scale, offsets[1] * scale)
         self.zip.writestr(path, png(w, h, data, offsets))
         return w, h
 
@@ -845,7 +1074,7 @@ class Converter:
                     for k, f in enumerate(frames):
                         b = self.pig.bitmaps[f]
                         self.write_graphic('sprites/%s%s0.png' % (vclip_sprite(prefix, vc), FRAME_LETTERS[k]),
-                                           f, (b.width // 2, b.height // 2))
+                                           f, (b.width // 2, b.height // 2), SHARP_VCLIPS.get(vc, 1))
         for pigname, sprite in BITMAP_SPRITES.items():
             idx = self.bitmap_index(pigname) or self.bitmap_index(pigname + '#0')
             if idx:
@@ -940,6 +1169,9 @@ class Converter:
 
     # -- polygon models ----------------------------------------------------
 
+    def closest_color(self, r, g, b):
+        return min(self.palette, key=lambda p: (p[0] - r) ** 2 + (p[1] - g) ** 2 + (p[2] - b) ** 2)
+
     def model_to_obj(self, mnum, name):
         gd = self.gd
         m = gd.models[mnum]
@@ -1012,11 +1244,15 @@ class Converter:
             for c in colors:
                 # bitmaps.bin was saved after g3_init_polygon_model() had
                 # already turned the 15-bit colours into palette indices.
-                if c < 256:
+                rgb15 = (((c >> 10) & 31) * 255 // 31, ((c >> 5) & 31) * 255 // 31, (c & 31) * 255 // 31)
+                if getattr(gd, 'colors15', False):
+                    # Shareware POFs: Descent uses the closest palette
+                    # colour (gr_find_closest_color_15bpp).
+                    r, g, b = self.closest_color(*rgb15)
+                elif c < 256:
                     r, g, b = self.palette[c]
                 else:
-                    r, g, b = (((c >> 10) & 31) * 255 // 31, ((c >> 5) & 31) * 255 // 31,
-                               (c & 31) * 255 // 31)
+                    r, g, b = rgb15
                 strip += bytes((r, g, b, 255))
             self.zip.writestr(base + '_c.png', png(len(colors), 1, strip))
         for i, bm in enumerate(textures):

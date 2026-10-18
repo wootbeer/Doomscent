@@ -63,16 +63,15 @@ class DDPhoenixBlob : DDBlobProjectile
 	}
 }
 
-// One blob of the omega cannon's lightning.  A new arc is drawn every tic;
-// each blob stays for three, cycling the vclip's frames and fading, so the
-// overlapping arcs crackle.
+// One blob of the omega cannon's lightning.  As in Descent II, a new arc is
+// drawn every tic out of blobs that show for that tic only, each on a
+// random frame of the omega vclip; the redrawing makes it flicker.
 class DDOmegaSpark : Actor
 {
 	int life;
 
 	Default
 	{
-		RenderStyle "Add";
 		+NOBLOCKMAP
 		+NOGRAVITY
 		+NOINTERACTION
@@ -93,17 +92,8 @@ class DDOmegaSpark : Actor
 	{
 		if (IsFrozen()) return;
 		// The first tick comes in the tic it was spawned (the ship thinks
-		// first), so four ticks show three times.
-		if (++life > 4)
-		{
-			Destroy();
-			return;
-		}
-		if (life > 1)
-		{
-			frame = (frame + 1) % 3;
-			Alpha *= 0.65;
-		}
+		// first), so this shows for exactly one tic.
+		if (++life > 1) Destroy();
 	}
 
 	static void Make(Vector3 at, double size, bool lit = false)
@@ -115,7 +105,7 @@ class DDOmegaSpark : Actor
 		double sc = DDVclip.ScaleFor(103, size);
 		s.Scale = (sc, sc);
 		if (lit)
-			s.A_AttachLight('arc', DynamicLight.PointLight, Color(190, 225, 255), 80, 0);
+			s.A_AttachLight('arc', DynamicLight.PointLight, Color(153, 191, 255), 110, 0);
 	}
 }
 

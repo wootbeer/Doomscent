@@ -251,13 +251,13 @@ extend class DDShip
 
 		DrawOmegaBolt(start, goal, s);
 
-		// The bolt's end crackles against whatever it hit, every frame as in
-		// Descent II, and the gun flashes.
-		if (hitSomething)
+		// The bolt's end crackles against whatever it hit every quarter
+		// second, and the gun flashes.
+		if (hitSomething && now >= nextOmegaImpact)
 		{
+			nextOmegaImpact = now + 0.25;
 			DDEffect.Make(goal, best ? s.robotHitVclip : s.wallHitVclip, s.impactSize * DD.SCALE / 2);
-			if (best && (omegaTics & 3) == 0)
-				best.A_StartSound("ddsnd/11", CHAN_BODY, CHANF_OVERLAP);
+			if (best) best.A_StartSound("ddsnd/11", CHAN_BODY, CHANF_OVERLAP);
 		}
 		if ((omegaTics % 6) == 1)
 			SpawnMuzzleFlash(s, start);
@@ -269,6 +269,7 @@ extend class DDShip
 		}
 	}
 	double omegaDamage;
+	double nextOmegaImpact;
 
 	static Vector3 RandomUnit()
 	{
@@ -329,9 +330,9 @@ extend class DDShip
 			if (i == n - 1) blobPos += delta * 15 / 32;
 			if ((i % 4) == 3) pv += RandomUnit() / 4;
 			Vector3 p = blobPos + pv * (perturb[i] * sc);
-			// Skip blobs right in front of the eye (the cockpit hides them
-			// in Descent II; without it they would fill the screen).
-			if (Level.IsPointInLevel(p) && (p - eye).Length() > 24)
+			// Skip a blob right at the eye, which would fill the screen.
+			// The big ones near the gun carry the lightning's shape.
+			if (Level.IsPointInLevel(p) && (p - eye).Length() > 2 * sc)
 				DDOmegaSpark.Make(p, size, (i % 4) == 1 || i == n - 1);
 			blobPos += delta;
 		}

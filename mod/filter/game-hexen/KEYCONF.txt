@@ -1,0 +1,4 @@
+// Hexen only (runs after the main KEYCONF): the ship with Hexen's Fighter
+// spawn class, so things placed per player class appear as for the Fighter.
+clearplayerclasses
+addplayerclass DDHexenShip
