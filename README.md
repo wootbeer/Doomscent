@@ -49,8 +49,8 @@ becomes Descent's ship:
      the shareware `DOOM1.WAD`), [Freedoom](https://freedoom.github.io/)'s
      `freedoom2.wad`, Chex Quest (`chex.wad`, `chex3.wad`), Heretic
      (`HERETIC.WAD`) or Hexen (`HEXEN.WAD`);
-   - `DESCENT.HOG` and `DESCENT.PIG` from Descent 1 (registered 1.4/1.5 is
-     tested; shareware should work but is untested).
+   - `DESCENT.HOG` and `DESCENT.PIG` from Descent 1 (registered 1.4/1.5, or
+     the shareware, which lacks the registered version's extra weapons).
 3. Double-click `Doomscent.bat`.
 
 For **Descent II mode**, also copy `DESCENT2.HOG`, `DESCENT2.HAM`,

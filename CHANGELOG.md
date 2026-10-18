@@ -1,3 +1,12 @@
+# Doomscent 0.5.1
+
+- Descent II's omega cannon looks like Descent II's: a fresh arc of
+  lightning blobs every tic, solid instead of faded, with crisp lightning
+  streaks and blue-white light, and the impact flash every quarter second
+- The Descent 1 shareware (1.0-1.2) converts: the converter no longer
+  crashes on its PIG, and reads the game tables it keeps in its HOG, so
+  the cockpit gauges, weapon pictures and 3D weapon models all work
+
 # Doomscent 0.5.0
 
 - Descent's cheat codes: Descent 1's in Descent 1 mode (start with
