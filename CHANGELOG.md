@@ -3,8 +3,9 @@
 - The 3D view fills the cockpit's window, as in Descent, instead of running
   behind the dashboard: the reticle sits in the middle of the window, and
   shots from the lower guns (like the omega's lightning) stay in view.
-  The guns sit a little lower than Descent's so that on widescreen their
-  shots still come out from under the dashboard. Without the cockpit (or
+  On widescreen the laser guns sit a little lower and wider apart than
+  Descent's, so their shots come out from under the dashboard on either
+  side as they do in Descent. Without the cockpit (or
   with the full-screen view size) the view is as before
 - Descent II's omega cannon looks like Descent II's: a fresh arc of
   lightning blobs every tic, solid instead of faded, with crisp lightning
