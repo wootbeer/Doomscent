@@ -12,7 +12,6 @@ class DDStatusBar : BaseStatusBar
 	override void Init()
 	{
 		Super.Init();
-		// Height 0: never shrink the 3D view for a status bar.
 		SetSize(0, 320, 200);
 		texCockpit = TexMan.CheckForTexture("DDCOCKPT", TexMan.Type_Any);
 		texRearView = TexMan.CheckForTexture("DDREARVW", TexMan.Type_Any);
@@ -28,6 +27,26 @@ class DDStatusBar : BaseStatusBar
 
 	double fontScale;
 
+	// Descent draws the 3D view only in the cockpit's window, the top two
+	// thirds of the screen (rows 0-132 of both games' cockpit art), with
+	// the view centred there.  The rest is reserved for the "status bar",
+	// so GZDoom does the same.
+	const COCKPIT_WINDOW_H = 133;
+	int viewTop;
+
+	void FitView(bool window)
+	{
+		// Forced scaling puts the status bar top at exactly 133/200 of the
+		// screen, where the stretched cockpit art has it.
+		BeginHUD(1, true, 320, 200);
+		int want = window ? 200 - COCKPIT_WINDOW_H : 0;
+		if (want == viewTop) return;
+		viewTop = want;
+		SetSize(want, 320, 200);
+		BeginHUD(1, true, 320, 200);
+		UpdateScreenGeometry();
+	}
+
 	override void Draw(int state, double ticFrac)
 	{
 		Super.Draw(state, ticFrac);
@@ -38,13 +57,14 @@ class DDStatusBar : BaseStatusBar
 		// The message line shows on the automap and when dead too.
 		CollectShipMessage(ship);
 		bool showView = !automapactive && CPlayer.playerstate == PST_LIVE && CPlayer.camera == CPlayer.mo;
+		bool cockpit = CVar.GetCVar('dd_cockpit', CPlayer).GetBool() && texCockpit.IsValid() && state != HUD_None;
+		FitView(showView && cockpit);
 		if (!showView)
 		{
 			DrawMessages();
 			return;
 		}
 
-		bool cockpit = CVar.GetCVar('dd_cockpit', CPlayer).GetBool() && texCockpit.IsValid() && state != HUD_None;
 		if (ship.rearView)
 		{
 			// Descent's rear view: its own cockpit art and no gauges or
@@ -470,7 +490,10 @@ class DDStatusBar : BaseStatusBar
 			secondaryBm++;
 		int crossBm = (primaryBm > 0 || secondaryBm > 0) ? 1 : 0;
 
-		double cx = 160, cy = 100;
+		// The middle of the 3D view (the cockpit window's, or the screen's).
+		int vx, vy, vw, vh;
+		[vx, vy, vw, vh] = Screen.GetViewWindow();
+		double cx = (vx + vw / 2.) / sx, cy = (vy + vh / 2.) / sy;
 		Pic(String.Format("DDRCRS%d", crossBm), cx - 4, cy - 2);
 		Pic(String.Format("DDRPRI%d", primaryBm), cx - 15, cy + 6);
 		Pic(String.Format("DDRSEC%d", secondaryBm), cx - 12, cy + 1);
