@@ -73,9 +73,6 @@ class DDShip : PlayerPawn
 		Player.ViewHeight 16;
 		Player.AttackZOffset 0;
 		Player.UseRange 96;
-		// Hexen spawns weapons per player class; spawn the Fighter's so
-		// there aren't three copies of everything.
-		Player.SpawnClass "Fighter";
 		Player.MaxHealth 200;
 		Player.ForwardMove 0, 0;
 		Player.SideMove 0, 0;
@@ -1187,5 +1184,17 @@ class DDShip : PlayerPawn
 		if (fx) fx.Setup(0, 40);
 		bNoGravity = false;
 		Gravity = 0.25;
+	}
+}
+
+// Hexen places some things (weapons, some monsters) per player class; in
+// Hexen the ship gets the Fighter's.  Only there: in UDMF maps without
+// class flags, as most mods' are, a spawn class would spawn no things.
+// filter/game-hexen/KEYCONF.txt makes this the player class.
+class DDHexenShip : DDShip
+{
+	Default
+	{
+		Player.SpawnClass "Fighter";
 	}
 }

@@ -7,6 +7,9 @@
   Descent's, so their shots come out from under the dashboard on either
   side as they do in Descent. Without the cockpit (or
   with the full-screen view size) the view is as before
+- Mods with their own maps (UDMF, like Doom City) have all their placed
+  things again: the ship's Hexen spawn class kept every thing in such
+  maps from appearing. It now only applies in Hexen
 - Descent II's omega cannon looks like Descent II's: a fresh arc of
   lightning blobs every tic, solid instead of faded, with crisp lightning
   streaks and blue-white light, and the impact flash every quarter second
