@@ -950,18 +950,23 @@ class DDShip : PlayerPawn
 	}
 
 	// Player_ship->gun_points[] for the Pyro-GX (Descent units, x right,
-	// y up, z forward).
+	// y up, z forward).  The forward guns sit GUN_DROP lower than Descent's:
+	// a widescreen view shows more to the sides than Descent's 4:3 one, so
+	// at Descent's height their shots would appear above the dashboard
+	// instead of coming out from under it.
+	const GUN_DROP = 1.5;
+
 	static Vector3 GunPoint(int gun)
 	{
 		switch (gun)
 		{
-			case 0: return (2.23, -0.91, 0.55);
-			case 1: return (-2.25, -0.91, 0.53);
-			case 2: return (3.39, -1.81, 2.26);
-			case 3: return (-3.41, -1.80, 2.26);
+			case 0: return (2.23, -0.91 - GUN_DROP, 0.55);
+			case 1: return (-2.25, -0.91 - GUN_DROP, 0.53);
+			case 2: return (3.39, -1.81 - GUN_DROP, 2.26);
+			case 3: return (-3.41, -1.80 - GUN_DROP, 2.26);
 			case 4: return (2.33, 0.0, -1.39);
 			case 5: return (-2.39, 0.0, -1.39);
-			case 6: return (0.02, -1.34, 2.82);
+			case 6: return (0.02, -1.34 - GUN_DROP, 2.82);
 			case 7: return (-0.02, -1.34, -2.91);
 		}
 		return (0, 0, 0);
